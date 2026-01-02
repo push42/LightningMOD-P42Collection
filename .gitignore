@@ -1,0 +1,19 @@
+# Ignore compiled plugins
+*.dll
+
+# Ignore TurboHUD cache files
+*.cache
+
+# Ignore Visual Studio files
+.vs/
+*.user
+*.suo
+
+# Ignore OS files
+Thumbs.db
+.DS_Store
+
+# Ignore backup files
+*.bak
+*.backup
+*~
