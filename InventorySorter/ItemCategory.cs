@@ -1,4 +1,4 @@
-namespace Turbo.Plugins.Community.InventorySorter
+namespace Turbo.Plugins.Custom.InventorySorter
 {
     /// <summary>
     /// Item category enumeration for sorting priority and organization.

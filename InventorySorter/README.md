@@ -2,6 +2,33 @@
 
 A simple and reliable inventory/stash sorting plugin using **keyboard only** - no mouse clicking required!
 
+---
+
+## ?? Installation
+
+1. Copy the `InventorySorter` folder to:
+   ```
+   TurboHUD\plugins\Custom\
+   ```
+
+2. Your folder structure should look like:
+   ```
+   TurboHUD\
+   ??? plugins\
+       ??? Custom\
+           ??? InventorySorter\
+               ??? InventorySorterPlugin.cs
+               ??? InventorySorterCustomizer.cs
+               ??? SorterConfiguration.cs
+               ??? ItemCategory.cs
+               ??? SortEnums.cs
+               ??? README.md
+   ```
+
+3. Restart TurboHUD
+
+---
+
 ## Features
 
 - **Sort by Category** - Primal > Ancient > Legendary > Set > Gems > Materials
@@ -27,11 +54,11 @@ A simple and reliable inventory/stash sorting plugin using **keyboard only** - n
 
 ## UI Panel
 
-A small info panel appears in the top-right when inventory/stash is open:
+A small info panel appears when inventory/stash is open:
 
 ```
 ????????????????????
-? ?Sort?         ?
+? Inventory Sort   ?
 ? Mode: Category   ?
 ? [K] Sort [?K] Mode?
 ????????????????????

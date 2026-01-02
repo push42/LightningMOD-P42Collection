@@ -1,4 +1,4 @@
-namespace Turbo.Plugins.Community.InventorySorter
+namespace Turbo.Plugins.Custom.InventorySorter
 {
     /// <summary>
     /// Sorting mode enumeration for different sorting strategies.

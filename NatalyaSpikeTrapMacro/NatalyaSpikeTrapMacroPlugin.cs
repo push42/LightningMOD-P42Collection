@@ -1,4 +1,4 @@
-namespace Turbo.Plugins.Community.NatalyaSpikeTrapMacro
+namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
 {
     using System;
     using System.Linq;

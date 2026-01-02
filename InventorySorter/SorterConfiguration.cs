@@ -1,4 +1,4 @@
-namespace Turbo.Plugins.Community.InventorySorter
+namespace Turbo.Plugins.Custom.InventorySorter
 {
     using System.Collections.Generic;
 

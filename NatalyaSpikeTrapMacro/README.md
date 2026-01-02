@@ -2,7 +2,7 @@
 
 A powerful automation macro for the **Natalya's Vengeance (N6) Spike Trap Demon Hunter** build.
 
-**Build Guide:** <https://maxroll.gg/d3/guides/natalya-spike-trap-demon-hunter-guide>
+**Build Guide:** https://maxroll.gg/d3/guides/natalya-spike-trap-demon-hunter-guide
 
 ---
 
@@ -20,13 +20,11 @@ A powerful automation macro for the **Natalya's Vengeance (N6) Spike Trap Demon 
 ## ?? Installation
 
 1. Copy the `NatalyaSpikeTrapMacro` folder to:
-
    ```
    TurboHUD\plugins\Custom\
    ```
 
 2. Your folder structure should look like:
-
    ```
    TurboHUD\
    ??? plugins\
@@ -70,13 +68,11 @@ The macro expects this exact skill configuration:
 ## ?? Combat Modes
 
 ### DAMAGE Mode (Default)
-
 - Places **5 Spike Traps** rapidly
 - Detonates with Evasive Fire
 - Best for: Boss fights, Rift Guardians, dense packs
 
 ### PULL Mode
-
 - Places **2 Spike Traps**
 - Casts Caltrops to pull enemies
 - Detonates with Evasive Fire
@@ -89,7 +85,6 @@ The macro expects this exact skill configuration:
 The macro shows a status panel below your character:
 
 **When Active (Combat):**
-
 ```
 N6 Spike Trap
 ? COMBAT (5)
@@ -97,7 +92,6 @@ DAMAGE (5 traps)
 ```
 
 **When Active (Moving):**
-
 ```
 N6 Spike Trap
 ? MOVING
@@ -105,7 +99,6 @@ N6 Spike Trap
 ```
 
 **When Inactive:**
-
 ```
 N6 Spike Trap
 OFF [F1]
@@ -118,7 +111,6 @@ OFF [F1]
 Edit `NatalyaSpikeTrapMacroCustomizer.cs` to customize:
 
 ### Key Bindings
-
 ```csharp
 // Change toggle key (default: F1)
 plugin.ToggleKeyEvent = Hud.Input.CreateKeyEvent(true, Key.F1, false, false, false);
@@ -128,7 +120,6 @@ plugin.ModeKeyEvent = Hud.Input.CreateKeyEvent(true, Key.F2, false, false, false
 ```
 
 ### Trap Settings
-
 ```csharp
 // Traps in PULL mode (1-2 recommended)
 plugin.PullModeTraps = 2;
@@ -138,7 +129,6 @@ plugin.DamageModeTraps = 5;
 ```
 
 ### Timing Settings
-
 ```csharp
 // Delay between trap placements (ms)
 plugin.TrapPlacementDelay = 30;
@@ -148,7 +138,6 @@ plugin.DetonationDelay = 50;
 ```
 
 ### Combat Settings
-
 ```csharp
 // Enemy detection range (yards)
 plugin.EnemyDetectionRange = 50f;
@@ -165,7 +154,6 @@ plugin.EnableAutoMovement = true;
 ## ??? Safety Features
 
 The macro automatically pauses when:
-
 - Game is loading or paused
 - Player is in town
 - Game window is not focused
@@ -196,7 +184,6 @@ A: Edit the `Key.F1` and `Key.F2` values in the customizer file.
 ## ?? Changelog
 
 ### v1.0.0
-
 - Initial release
 - Smart combat detection
 - Auto movement when no enemies

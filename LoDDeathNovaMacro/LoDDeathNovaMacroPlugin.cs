@@ -1,4 +1,4 @@
-namespace Turbo.Plugins.Community.LoDDeathNovaMacro
+namespace Turbo.Plugins.Custom.LoDDeathNovaMacro
 {
     using System;
     using System.Linq;
