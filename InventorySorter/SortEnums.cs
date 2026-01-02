@@ -1,4 +1,4 @@
-namespace Turbo.Plugins.Custom.InventorySorter
+﻿namespace Turbo.Plugins.Custom.InventorySorter
 {
     /// <summary>
     /// Sorting mode enumeration for different sorting strategies.
@@ -34,6 +34,13 @@ namespace Turbo.Plugins.Custom.InventorySorter
         /// Best for finding specific items quickly.
         /// </summary>
         Alphabetical,
+
+        /// <summary>
+        /// Row-locked sorting - each category gets its own row(s).
+        /// Gems of different colors won't share the same row.
+        /// Best for gem organization like the screenshot layout.
+        /// </summary>
+        RowLocked,
 
         /// <summary>
         /// Custom sorting using user-defined rules.

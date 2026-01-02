@@ -1,200 +1,146 @@
-# Natalya Spike Trap Macro for TurboHUD
+# Natalya Spike Trap Demon Hunter Macro
 
-A powerful automation macro for the **Natalya's Vengeance (N6) Spike Trap Demon Hunter** build.
+Auto-combat macro for the Natalya's Vengeance Spike Trap build.
 
 **Build Guide:** https://maxroll.gg/d3/guides/natalya-spike-trap-demon-hunter-guide
 
 ---
 
-## ?? Features
+## Skill Setup
 
-- **Smart Combat Detection** - Only attacks when enemies are nearby
-- **Auto Movement** - Uses Force Move to travel when no enemies present
-- **Two Combat Modes** - PULL mode for grouping, DAMAGE mode for nuking
-- **Automatic Buff Management** - Keeps Vengeance, Shadow Power, and Smoke Screen active
-- **Build-Specific Activation** - Only shows when Spike Trap is equipped (won't interfere with GoD builds)
-- **Safety Pauses** - Automatically pauses during loading, menus, death, etc.
-
----
-
-## ?? Installation
-
-1. Copy the `NatalyaSpikeTrapMacro` folder to:
-   ```
-   TurboHUD\plugins\Custom\
-   ```
-
-2. Your folder structure should look like:
-   ```
-   TurboHUD\
-   ??? plugins\
-       ??? Custom\
-           ??? NatalyaSpikeTrapMacro\
-               ??? NatalyaSpikeTrapMacroPlugin.cs
-               ??? NatalyaSpikeTrapMacroCustomizer.cs
-               ??? README.md
-   ```
-
-3. Restart TurboHUD
+| Slot | Skill | Rune | Behavior |
+|------|-------|------|----------|
+| Left Click | Evasive Fire | Hardened | Auto - detonates traps |
+| Right Click | Spike Trap | Custom Trigger | Auto - main damage |
+| 1 | Caltrops | Bait the Trap | Auto - pulls enemies |
+| 2 | Vengeance | Dark Heart | Auto - buff |
+| 3 | Smoke Screen | Healing Vapors | Auto - defense |
+| 4 | Shadow Power | Gloom | Auto - defense |
 
 ---
 
-## ?? Controls
+## Hotkeys
 
 | Key | Action |
 |-----|--------|
-| **F1** | Toggle macro ON/OFF |
-| **F2** | Switch between PULL and DAMAGE mode |
+| `F1` | Toggle macro ON/OFF |
+| `F2` | Switch between PULL and DAMAGE mode |
 
 ---
 
-## ?? Required Skill Setup
+## Modes
 
-The macro expects this exact skill configuration:
-
-| Slot | Skill | Rune | Purpose |
-|------|-------|------|---------|
-| **Left Click** | Evasive Fire | Hardened | Detonates traps |
-| **Right Click** | Spike Trap | Custom Trigger | Main damage |
-| **Skill 1** | Caltrops | Bait the Trap | Pull enemies (optional) |
-| **Skill 2** | Vengeance | Dark Heart | Damage buff |
-| **Skill 3** | Smoke Screen | Healing Vapors | Emergency defense |
-| **Skill 4** | Shadow Power | Gloom | Sustain |
-
-> **Note:** Skills 3-4 can be swapped. The macro detects skills by type, not by slot.
-
----
-
-## ?? Combat Modes
-
-### DAMAGE Mode (Default)
-- Places **5 Spike Traps** rapidly
-- Detonates with Evasive Fire
-- Best for: Boss fights, Rift Guardians, dense packs
-
-### PULL Mode
+### PULL Mode (F2 to switch)
 - Places **2 Spike Traps**
-- Casts Caltrops to pull enemies
-- Detonates with Evasive Fire
-- Best for: Grouping scattered enemies
+- Then places **Caltrops**
+- Then fires **Evasive Fire** to detonate
+- **Purpose:** Pull enemies together into a pixelstack
+
+### DAMAGE Mode (default)
+- Places **5 Spike Traps** (optimal chain reaction)
+- Then fires **Evasive Fire** to detonate
+- **Purpose:** Maximum damage output
 
 ---
 
-## ?? On-Screen Display
+## How It Works
 
-The macro shows a status panel below your character:
+### Rotation Priority:
+1. **Vengeance** - Keep buff up at all times
+2. **Shadow Power** - Keep buff up when fighting
+3. **Smoke Screen** - Use when health drops below 70%
+4. **Combat Rotation** - Based on mode:
 
-**When Active (Combat):**
+### Pull Mode Rotation:
 ```
-N6 Spike Trap
-? COMBAT (5)
-DAMAGE (5 traps)
+2x Spike Trap ? Caltrops ? Evasive Fire
 ```
+This pulls enemies into the Caltrops for stacking.
 
-**When Active (Moving):**
+### Damage Mode Rotation:
 ```
-N6 Spike Trap
-? MOVING
-[F2] DAMAGE
+5x Spike Trap ? Evasive Fire
 ```
-
-**When Inactive:**
-```
-N6 Spike Trap
-OFF [F1]
-```
+This creates optimal chain reactions for maximum damage.
 
 ---
 
-## ?? Configuration
+## Optimal Gameplay
 
-Edit `NatalyaSpikeTrapMacroCustomizer.cs` to customize:
+1. **Start in PULL mode** (press F2 if needed)
+2. Run into a pack of enemies
+3. Let the macro pull them together
+4. **Switch to DAMAGE mode** (press F2)
+5. Let the macro nuke them with 5-trap chain reactions
+6. Repeat
 
-### Key Bindings
+---
+
+## Build Mechanics
+
+From the Maxroll guide:
+
+- **Natalya (2) Bonus:** No cost/cooldown for Spike Trap, +100% damage with Caltrops
+- **Natalya (4) Bonus:** Caltrops pull enemies when hit by Spike Trap
+- **Natalya (6) Bonus:** +10,000% damage, +25% per consecutive explosion
+- **Custom Engineering:** Allows 10 traps (5 placements with Trag'Oul Scatter)
+- **Trag'Oul Coils:** Adds Scatter rune (2 traps per placement)
+
+### Chain Reaction Math:
+- 5 trap placements × 2 (Scatter) = 10 traps
+- Each consecutive explosion = +25% damage
+- Max bonus: 9 × 25% = +225% on final tick
+- Average damage increase: +112.5%
+
+---
+
+## Configuration
+
+Edit `NatalyaSpikeTrapMacroCustomizer.cs`:
+
 ```csharp
-// Change toggle key (default: F1)
-plugin.ToggleKeyEvent = Hud.Input.CreateKeyEvent(true, Key.F1, false, false, false);
+// Trap counts
+plugin.PullModeTraps = 2;      // Traps for pulling
+plugin.DamageModeTraps = 5;    // Traps for damage (optimal)
 
-// Change mode switch key (default: F2)
-plugin.ModeKeyEvent = Hud.Input.CreateKeyEvent(true, Key.F2, false, false, false);
-```
+// Timing (ms)
+plugin.TrapPlacementDelay = 30;  // Between traps
+plugin.DetonationDelay = 50;     // Before detonating
 
-### Trap Settings
-```csharp
-// Traps in PULL mode (1-2 recommended)
-plugin.PullModeTraps = 2;
+// Buff refresh (seconds remaining)
+plugin.VengeanceRefreshTime = 3.0f;
+plugin.ShadowPowerRefreshTime = 2.0f;
 
-// Traps in DAMAGE mode (5 for max chain reaction)
-plugin.DamageModeTraps = 5;
-```
-
-### Timing Settings
-```csharp
-// Delay between trap placements (ms)
-plugin.TrapPlacementDelay = 30;
-
-// Delay before detonating (ms)
-plugin.DetonationDelay = 50;
-```
-
-### Combat Settings
-```csharp
 // Enemy detection range (yards)
 plugin.EnemyDetectionRange = 50f;
-
-// Minimum enemies to start combat
-plugin.MinEnemiesForCombat = 1;
-
-// Auto-move when no enemies
-plugin.EnableAutoMovement = true;
 ```
 
 ---
 
-## ??? Safety Features
+## Tips
 
-The macro automatically pauses when:
-- Game is loading or paused
-- Player is in town
-- Game window is not focused
-- Inventory/map/menus are open
-- Chat is open
-- Player is dead
-- Casting town portal
-- Cursor is outside game window
+1. **Use PULL mode first** to gather enemies
+2. **Switch to DAMAGE mode** once enemies are stacked
+3. **Stand in Oculus Ring** circles for +85% damage
+4. **Smoke Screen** is automatic when health is low
+5. The macro keeps **Vengeance** and **Shadow Power** up automatically
 
 ---
 
-## ? FAQ
+## Files
 
-**Q: The macro doesn't show up?**
-A: Make sure Spike Trap is equipped. The macro only activates for Spike Trap builds.
-
-**Q: Can I use this with GoD Strafe?**
-A: No need! The macro automatically disables when Spike Trap isn't equipped.
-
-**Q: The timing feels off?**
-A: Adjust `TrapPlacementDelay` and `DetonationDelay` in the customizer.
-
-**Q: I want to change the keys?**
-A: Edit the `Key.F1` and `Key.F2` values in the customizer file.
+| File | Description |
+|------|-------------|
+| `NatalyaSpikeTrapMacroPlugin.cs` | Main plugin |
+| `NatalyaSpikeTrapMacroCustomizer.cs` | Configuration |
+| `README.md` | This file |
 
 ---
 
-## ?? Changelog
+## Panel Position
 
-### v1.0.0
-- Initial release
-- Smart combat detection
-- Auto movement when no enemies
-- PULL and DAMAGE modes
-- Automatic buff management
-- Build-specific activation
+The status panel appears at Y=0.70 (70% from top) on the left side.
 
 ---
 
-## ?? License
-
-Free to use and modify. Credit appreciated but not required.
-
-Enjoy pushing those Greater Rifts! ??
+*Press F1 to start, F2 to switch modes!*

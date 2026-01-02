@@ -1,0 +1,5 @@
+# InventorySorter Presets Configuration
+# Auto-generated - DO NOT EDIT MANUALLY
+
+ActivePreset=collector
+

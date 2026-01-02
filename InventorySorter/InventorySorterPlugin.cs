@@ -1,29 +1,46 @@
-namespace Turbo.Plugins.Custom.InventorySorter
+﻿namespace Turbo.Plugins.Custom.InventorySorter
 {
     using System;
     using System.Collections.Generic;
     using System.Drawing;
+    using System.IO;
     using System.Linq;
     using System.Windows.Forms;
     using SharpDX.DirectInput;
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Inventory/Stash Sorter Plugin
-    /// K = Sort, Shift+K = Change Mode
+    /// Advanced Inventory/Stash Sorter Plugin with In-Game Configuration
+    /// 
+    /// Features:
+    /// - Preset-based stash organization (Speed Farmer, Collector, etc.)
+    /// - In-game configuration UI with click blocking
+    /// - Zone-based sorting within tabs
+    /// - Row-locked gem sorting (each color gets own row)
+    /// - Smart item placement
+    /// 
+    /// Hotkeys:
+    /// - K = Sort current tab/inventory
+    /// - Shift+K = Cycle sort mode
+    /// - Ctrl+K = Open configuration panel
+    /// - ESC = Cancel sorting
     /// </summary>
     public class InventorySorterPlugin : BasePlugin, IKeyEventHandler, IInGameTopPainter, IAfterCollectHandler
     {
         #region Public Properties
 
         public SorterConfiguration Config { get; private set; }
+        public PresetManager PresetMgr { get; private set; }
         public IKeyEvent SortKey { get; set; }
         public IKeyEvent ModeKey { get; set; }
+        public IKeyEvent ConfigKey { get; set; }
         public IKeyEvent CancelKey { get; set; }
         
+        public SortMode CurrentMode { get { return _currentMode; } }
+
         // Panel positioning (percentage of screen)
         public float PanelX { get; set; } = 0.005f;
-        public float PanelY { get; set; } = 0.56f; // Below AutoEvade (0.42) and AutoPickup (0.35)
+        public float PanelY { get; set; } = 0.56f;
 
         #endregion
 
@@ -33,13 +50,23 @@ namespace Turbo.Plugins.Custom.InventorySorter
         private bool _shouldCancel;
         private SortMode _currentMode = SortMode.ByCategory;
         
+        // Advanced UI
+        private SorterConfigUI _configUI;
+        
         // UI - Unified styling
         private IFont _titleFont;
         private IFont _statusFont;
         private IFont _infoFont;
+        private IFont _smallFont;
+        private IFont _progressFont;
         private IBrush _panelBrush;
         private IBrush _borderBrush;
         private IBrush _accentBrush;
+        private IBrush _accentOffBrush;
+        private IBrush _highlightBrush;
+        private IBrush _protectedBrush;
+        private IBrush _progressBgBrush;
+        private IBrush _progressFillBrush;
         
         // Stash
         private IUiElement _stashElement;
@@ -47,6 +74,7 @@ namespace Turbo.Plugins.Custom.InventorySorter
         // Status
         private string _statusText = "";
         private int _sortedCount;
+        private int _totalToSort;
         private IWatch _statusTimer;
 
         #endregion
@@ -63,23 +91,55 @@ namespace Turbo.Plugins.Custom.InventorySorter
         {
             base.Load(hud);
 
+            // Configuration
             Config = new SorterConfiguration();
             
+            // Preset Manager
+            PresetMgr = new PresetManager();
+            PresetMgr.DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins", "Custom", "InventorySorter");
+            PresetMgr.Initialize();
+
+            // Key bindings
             SortKey = Hud.Input.CreateKeyEvent(true, Key.K, false, false, false);
-            ModeKey = Hud.Input.CreateKeyEvent(true, Key.K, false, false, true);
+            ModeKey = Hud.Input.CreateKeyEvent(true, Key.K, false, false, true);      // Shift+K
+            ConfigKey = Hud.Input.CreateKeyEvent(true, Key.K, true, false, false);    // Ctrl+K
             CancelKey = Hud.Input.CreateKeyEvent(true, Key.Escape, false, false, false);
 
-            // Unified UI styling (matching SmartEvade and AutoMaster)
+            // Initialize fonts
             _titleFont = Hud.Render.CreateFont("tahoma", 8, 255, 220, 180, 100, true, false, 180, 0, 0, 0, true);
             _statusFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 255, 255, 255, true, false, 160, 0, 0, 0, true);
             _infoFont = Hud.Render.CreateFont("tahoma", 7, 200, 180, 180, 180, false, false, 140, 0, 0, 0, true);
+            _smallFont = Hud.Render.CreateFont("tahoma", 6.5f, 200, 150, 150, 150, false, false, 120, 0, 0, 0, true);
+            _progressFont = Hud.Render.CreateFont("tahoma", 7, 255, 100, 255, 100, true, false, 150, 0, 0, 0, true);
             
+            // Initialize brushes
             _panelBrush = Hud.Render.CreateBrush(235, 15, 15, 25, 0);
             _borderBrush = Hud.Render.CreateBrush(200, 60, 60, 80, 1f);
             _accentBrush = Hud.Render.CreateBrush(255, 220, 180, 100, 0);
+            _accentOffBrush = Hud.Render.CreateBrush(255, 100, 100, 100, 0);
+            _highlightBrush = Hud.Render.CreateBrush(150, 100, 255, 100, 2f);
+            _protectedBrush = Hud.Render.CreateBrush(150, 255, 200, 0, 2f);
+            _progressBgBrush = Hud.Render.CreateBrush(200, 30, 30, 45, 0);
+            _progressFillBrush = Hud.Render.CreateBrush(255, 80, 180, 100, 0);
 
+            // Stash element
             _stashElement = Hud.Inventory.StashMainUiElement;
             _statusTimer = Hud.Time.CreateWatch();
+
+            // Config UI
+            _configUI = new SorterConfigUI(Hud, this);
+            _configUI.SetReferences(PresetMgr, Config);
+        }
+
+        #endregion
+
+        #region Public Methods
+
+        public void SetSortMode(SortMode mode)
+        {
+            _currentMode = mode;
+            _statusText = "Mode: " + GetModeName(mode);
+            _statusTimer.Restart();
         }
 
         #endregion
@@ -90,6 +150,16 @@ namespace Turbo.Plugins.Custom.InventorySorter
         {
             if (!Hud.Game.IsInGame) return;
             if (!IsInventoryOpen()) return;
+
+            // Ctrl+K = Toggle config panel
+            if (ConfigKey.Matches(keyEvent) && keyEvent.IsPressed)
+            {
+                _configUI.IsVisible = !_configUI.IsVisible;
+                return;
+            }
+
+            // If config is visible and handles input, don't process other keys
+            if (_configUI.IsVisible && _configUI.IsMouseOverUI) return;
 
             // Shift+K = Cycle mode
             if (ModeKey.Matches(keyEvent) && keyEvent.IsPressed)
@@ -114,10 +184,17 @@ namespace Turbo.Plugins.Custom.InventorySorter
             }
 
             // ESC = Cancel
-            if (CancelKey.Matches(keyEvent) && keyEvent.IsPressed && _isRunning)
+            if (CancelKey.Matches(keyEvent) && keyEvent.IsPressed)
             {
-                _shouldCancel = true;
-                _statusText = "Cancelling...";
+                if (_isRunning)
+                {
+                    _shouldCancel = true;
+                    _statusText = "Cancelling...";
+                }
+                else if (_configUI.IsVisible)
+                {
+                    _configUI.IsVisible = false;
+                }
             }
         }
 
@@ -127,8 +204,15 @@ namespace Turbo.Plugins.Custom.InventorySorter
 
         public void AfterCollect()
         {
-            if (!_isRunning) return;
             if (!Hud.Game.IsInGame) return;
+
+            // Handle config UI mouse input
+            if (_configUI.IsVisible && IsInventoryOpen())
+            {
+                _configUI.HandleMouseInput();
+            }
+
+            if (!_isRunning) return;
 
             if (_shouldCancel || !IsInventoryOpen() || !Hud.Window.IsForeground)
             {
@@ -147,7 +231,7 @@ namespace Turbo.Plugins.Custom.InventorySorter
             _isRunning = true;
             _shouldCancel = false;
             _sortedCount = 0;
-            _statusText = "Sorting...";
+            _statusText = "Analyzing...";
             _statusTimer.Restart();
 
             try
@@ -157,13 +241,23 @@ namespace Turbo.Plugins.Custom.InventorySorter
                 
                 if (items.Count == 0)
                 {
-                    _statusText = "No items";
+                    _statusText = "No items to sort";
                     _isRunning = false;
                     return;
                 }
 
                 var sorted = SortItemList(items);
-                var moves = PlanMoves(sorted, isStash);
+                List<MoveOp> moves;
+
+                // Use row-locked placement for RowLocked mode
+                if (_currentMode == SortMode.RowLocked)
+                {
+                    moves = PlanRowLockedMoves(sorted, isStash);
+                }
+                else
+                {
+                    moves = PlanMoves(sorted, isStash);
+                }
                 
                 if (moves.Count == 0)
                 {
@@ -172,6 +266,7 @@ namespace Turbo.Plugins.Custom.InventorySorter
                     return;
                 }
 
+                _totalToSort = moves.Count;
                 int cursorX = Hud.Window.CursorX;
                 int cursorY = Hud.Window.CursorY;
 
@@ -182,14 +277,14 @@ namespace Turbo.Plugins.Custom.InventorySorter
 
                     ExecuteMove(move, isStash);
                     _sortedCount++;
-                    _statusText = string.Format("{0}/{1}", _sortedCount, moves.Count);
+                    _statusText = string.Format("Sorting {0}/{1}", _sortedCount, _totalToSort);
                     
                     Hud.ReCollect();
-                    Hud.Wait(30);
+                    Hud.Wait(Config.WaitAfterMoveMs);
                 }
 
                 Hud.Interaction.MouseMove(cursorX, cursorY, 1, 1);
-                _statusText = _shouldCancel ? "Cancelled" : string.Format("Done! ({0})", _sortedCount);
+                _statusText = _shouldCancel ? "Cancelled" : string.Format("Done! ({0} items)", _sortedCount);
             }
             catch (Exception)
             {
@@ -211,10 +306,10 @@ namespace Turbo.Plugins.Custom.InventorySorter
 
         private void CycleMode()
         {
-            var modes = new[] { SortMode.ByCategory, SortMode.ByQuality, SortMode.ByType, SortMode.BySize, SortMode.Alphabetical };
+            var modes = new[] { SortMode.ByCategory, SortMode.ByQuality, SortMode.ByType, SortMode.BySize, SortMode.Alphabetical, SortMode.RowLocked };
             int idx = Array.IndexOf(modes, _currentMode);
             _currentMode = modes[(idx + 1) % modes.Length];
-            _statusText = GetModeName(_currentMode);
+            _statusText = "Mode: " + GetModeName(_currentMode);
             _statusTimer.Restart();
         }
 
@@ -257,6 +352,7 @@ namespace Turbo.Plugins.Custom.InventorySorter
                 si.SetSno = item.SetSno;
                 si.GemType = GetGemType(item);
                 si.GemRank = GetGemRank(item);
+                si.RowGroup = GetRowGroup(item); // For row-locked sorting
                 
                 result.Add(si);
             }
@@ -264,24 +360,197 @@ namespace Turbo.Plugins.Custom.InventorySorter
             return result;
         }
 
+        /// <summary>
+        /// Get the row group for an item (used in RowLocked mode)
+        /// Items in the same row group will be placed together in rows
+        /// </summary>
+        private int GetRowGroup(IItem item)
+        {
+            var sno = item.SnoItem;
+            if (sno == null) return 999;
+
+            // Legendary gems - group 0 (top priority)
+            if (sno.MainGroupCode == "gems_unique") return 0;
+
+            // Regular gems - group by color (1-6)
+            if (sno.Kind == ItemKind.gem)
+            {
+                return GetGemType(item); // 1=Amethyst, 2=Diamond, 3=Emerald, 4=Ruby, 5=Topaz
+            }
+
+            // Crafting materials - group 10
+            if (sno.Kind == ItemKind.craft) return 10;
+
+            // Equipment by ancient rank
+            if (item.AncientRank == 2) return 20; // Primals
+            if (item.AncientRank == 1) return 30; // Ancients
+
+            // Set items
+            if (item.SetSno != 0) return 40;
+
+            // Legendaries
+            if (item.IsLegendary) return 50;
+
+            // Other
+            return 100;
+        }
+
         private List<SortItem> SortItemList(List<SortItem> items)
         {
+            IOrderedEnumerable<SortItem> query;
+
             switch (_currentMode)
             {
                 case SortMode.ByCategory:
-                    return items.OrderBy(i => (int)i.Category).ThenBy(i => i.SubCategory)
-                        .ThenByDescending(i => i.GemRank).ThenByDescending(i => i.Quality).ThenBy(i => i.Name).ToList();
+                    if (Config.PrimalsFirst)
+                    {
+                        query = items.OrderByDescending(i => i.Item.AncientRank == 2 ? 1 : 0)
+                                     .ThenBy(i => (int)i.Category);
+                    }
+                    else
+                    {
+                        query = items.OrderBy(i => (int)i.Category);
+                    }
+
+                    if (Config.GroupSets)
+                        query = query.ThenBy(i => i.SetSno == 0 ? 1 : 0).ThenBy(i => i.SetSno);
+
+                    if (Config.GroupGemsByColor)
+                        query = query.ThenBy(i => i.GemType);
+
+                    return query.ThenByDescending(i => i.GemRank)
+                                .ThenByDescending(i => i.Quality)
+                                .ThenBy(i => i.Name)
+                                .ToList();
+
                 case SortMode.ByQuality:
-                    return items.OrderByDescending(i => i.Quality).ThenByDescending(i => i.GemRank).ThenBy(i => i.Name).ToList();
+                    return items.OrderByDescending(i => i.Quality)
+                                .ThenByDescending(i => i.GemRank)
+                                .ThenBy(i => i.Name)
+                                .ToList();
+
                 case SortMode.ByType:
-                    return items.OrderBy(i => GetSlotOrder(i.Item)).ThenBy(i => i.SetSno).ThenBy(i => i.Name).ToList();
+                    return items.OrderBy(i => GetSlotOrder(i.Item))
+                                .ThenBy(i => i.SetSno)
+                                .ThenByDescending(i => i.Quality)
+                                .ThenBy(i => i.Name)
+                                .ToList();
+
                 case SortMode.BySize:
-                    return items.OrderByDescending(i => i.Width * i.Height).ThenBy(i => i.Name).ToList();
+                    return items.OrderByDescending(i => i.Width * i.Height)
+                                .ThenByDescending(i => i.Quality)
+                                .ThenBy(i => i.Name)
+                                .ToList();
+
                 case SortMode.Alphabetical:
-                    return items.OrderBy(i => i.Name).ToList();
+                    return items.OrderBy(i => i.Name)
+                                .ThenByDescending(i => i.Quality)
+                                .ToList();
+
+                case SortMode.RowLocked:
+                    // Sort by row group first, then by rank/quality within group
+                    return items.OrderBy(i => i.RowGroup)
+                                .ThenByDescending(i => i.GemRank)
+                                .ThenByDescending(i => i.Quality)
+                                .ThenBy(i => i.Name)
+                                .ToList();
+
                 default:
                     return items;
             }
+        }
+
+        /// <summary>
+        /// Plan moves for row-locked sorting where each category gets its own row(s)
+        /// </summary>
+        private List<MoveOp> PlanRowLockedMoves(List<SortItem> sortedItems, bool isStash)
+        {
+            var moves = new List<MoveOp>();
+            int gridW = isStash ? 7 : 10;
+            int gridH = isStash ? 10 : 6;
+            
+            bool[,] grid = new bool[gridW, gridH];
+
+            // Respect inventory lock
+            if (!isStash && Config.RespectInventoryLock)
+            {
+                var lockArea = Hud.Inventory.InventoryLockArea;
+                for (int x = lockArea.X; x < lockArea.X + lockArea.Width && x < gridW; x++)
+                    for (int y = lockArea.Y; y < lockArea.Y + lockArea.Height && y < gridH; y++)
+                        if (x >= 0 && y >= 0) grid[x, y] = true;
+            }
+
+            // Group items by their row group
+            var groupedItems = sortedItems.GroupBy(i => i.RowGroup).OrderBy(g => g.Key).ToList();
+
+            int currentRow = 0;
+            int currentX = 0;
+
+            foreach (var group in groupedItems)
+            {
+                var itemsInGroup = group.OrderByDescending(i => i.GemRank).ThenByDescending(i => i.Quality).ToList();
+                
+                // Start each new group on a new row (unless it's the first group and row 0)
+                if (currentX > 0)
+                {
+                    currentRow++;
+                    currentX = 0;
+                }
+
+                foreach (var item in itemsInGroup)
+                {
+                    if (currentRow >= gridH) break; // Out of space
+
+                    // Find position in current row
+                    bool placed = false;
+                    
+                    // Try to place in current row
+                    while (currentX <= gridW - item.Width)
+                    {
+                        if (CanPlace(grid, currentX, currentRow, item.Width, item.Height))
+                        {
+                            // Place item
+                            for (int dx = 0; dx < item.Width; dx++)
+                                for (int dy = 0; dy < item.Height; dy++)
+                                    if (currentRow + dy < gridH)
+                                        grid[currentX + dx, currentRow + dy] = true;
+
+                            if (item.X != currentX || item.Y != currentRow)
+                                moves.Add(new MoveOp { Item = item, TargetX = currentX, TargetY = currentRow });
+
+                            currentX += item.Width;
+                            placed = true;
+                            break;
+                        }
+                        currentX++;
+                    }
+
+                    // If couldn't place in current row, move to next row
+                    if (!placed)
+                    {
+                        currentRow++;
+                        currentX = 0;
+
+                        if (currentRow >= gridH) break;
+
+                        // Try again in new row
+                        if (CanPlace(grid, currentX, currentRow, item.Width, item.Height))
+                        {
+                            for (int dx = 0; dx < item.Width; dx++)
+                                for (int dy = 0; dy < item.Height; dy++)
+                                    if (currentRow + dy < gridH)
+                                        grid[currentX + dx, currentRow + dy] = true;
+
+                            if (item.X != currentX || item.Y != currentRow)
+                                moves.Add(new MoveOp { Item = item, TargetX = currentX, TargetY = currentRow });
+
+                            currentX += item.Width;
+                        }
+                    }
+                }
+            }
+
+            return ReorderMoves(moves);
         }
 
         private List<MoveOp> PlanMoves(List<SortItem> sortedItems, bool isStash)
@@ -351,7 +620,7 @@ namespace Turbo.Plugins.Custom.InventorySorter
             if (item == null) return;
 
             Hud.Interaction.ClickInventoryItem(MouseButtons.Left, item);
-            Hud.Wait(50);
+            Hud.Wait(Config.ClickDelayMs);
 
             RectangleF targetRect = isStash 
                 ? Hud.Inventory.GetRectInStash(move.TargetX, move.TargetY, 1, 1)
@@ -361,15 +630,20 @@ namespace Turbo.Plugins.Custom.InventorySorter
             float cy = targetRect.Y + targetRect.Height / 2;
             
             Hud.Interaction.MouseMove((int)cx, (int)cy, 1, 1);
-            Hud.Wait(30);
+            Hud.Wait(Config.MoveDelayMs);
             Hud.Interaction.MouseDown(MouseButtons.Left);
             Hud.Wait(10);
             Hud.Interaction.MouseUp(MouseButtons.Left);
-            Hud.Wait(50);
+            Hud.Wait(Config.ClickDelayMs);
         }
 
         private bool CanPlace(bool[,] grid, int x, int y, int w, int h)
         {
+            int gridW = grid.GetLength(0);
+            int gridH = grid.GetLength(1);
+            
+            if (x + w > gridW || y + h > gridH) return false;
+            
             for (int dx = 0; dx < w; dx++)
                 for (int dy = 0; dy < h; dy++)
                     if (grid[x + dx, y + dy]) return false;
@@ -390,28 +664,42 @@ namespace Turbo.Plugins.Custom.InventorySorter
             if (clipState != ClipState.BeforeClip) return;
             if (!Hud.Game.IsInGame) return;
 
-            // Always show panel (like AutoEvade and AutoPickup)
+            // Draw main control panel
             DrawPanel();
+
+            // Draw config UI if visible
+            if (_configUI.IsVisible && IsInventoryOpen())
+            {
+                var invRect = Hud.Inventory.InventoryMainUiElement.Rectangle;
+                _configUI.Render(invRect);
+            }
+
+            // Draw item highlights
+            if (Config.ShowHighlights && IsInventoryOpen())
+            {
+                DrawItemHighlights();
+            }
         }
 
         private void DrawPanel()
         {
-            // Position below AutoEvade and AutoPickup panels (same left side)
             float x = Hud.Window.Size.Width * PanelX;
             float y = Hud.Window.Size.Height * PanelY;
-            float w = 120;
-            float h = 48;
+            float w = 150;
+            float h = _isRunning ? 72 : 60;
             float pad = 6;
 
             // Panel background
             _panelBrush.DrawRectangle(x, y, w, h);
             _borderBrush.DrawRectangle(x, y, w, h);
 
-            // Accent bar (left side)
-            _accentBrush.DrawRectangle(x, y, 3, h);
+            // Accent bar
+            var accentBrush = _isRunning ? _accentBrush : _accentOffBrush;
+            accentBrush.DrawRectangle(x, y, 3, h);
 
             float tx = x + pad + 3;
             float ty = y + pad;
+            float contentW = w - pad * 2 - 3;
 
             // Title
             var title = _titleFont.GetTextLayout("Inventory Sort");
@@ -422,23 +710,68 @@ namespace Turbo.Plugins.Custom.InventorySorter
             string modeStr = "Mode: " + GetModeName(_currentMode);
             var modeLayout = _statusFont.GetTextLayout(modeStr);
             _statusFont.DrawText(modeLayout, tx, ty);
-            ty += modeLayout.Metrics.Height + 1;
+            ty += modeLayout.Metrics.Height + 2;
 
             // Status or hints
             if (_isRunning)
             {
-                var sLayout = _infoFont.GetTextLayout(_statusText);
-                _infoFont.DrawText(sLayout, tx, ty);
+                // Progress bar
+                float progressW = contentW;
+                float progressH = 6;
+                _progressBgBrush.DrawRectangle(tx, ty, progressW, progressH);
+                
+                float pct = _totalToSort > 0 ? (float)_sortedCount / _totalToSort : 0;
+                _progressFillBrush.DrawRectangle(tx, ty, progressW * pct, progressH);
+                ty += progressH + 3;
+
+                var sLayout = _progressFont.GetTextLayout(_statusText);
+                _progressFont.DrawText(sLayout, tx, ty);
             }
-            else if (_statusTimer.IsRunning && _statusTimer.ElapsedMilliseconds < 2000 && !string.IsNullOrEmpty(_statusText))
+            else if (_statusTimer.IsRunning && _statusTimer.ElapsedMilliseconds < 2500 && !string.IsNullOrEmpty(_statusText))
             {
                 var sLayout = _infoFont.GetTextLayout(_statusText);
                 _infoFont.DrawText(sLayout, tx, ty);
             }
             else
             {
-                var hint = _infoFont.GetTextLayout("[K] Sort [Shift+K] Mode");
-                _infoFont.DrawText(hint, tx, ty);
+                var hint = _smallFont.GetTextLayout("[K] Sort [⇧K] Mode [^K] Config");
+                _smallFont.DrawText(hint, tx, ty);
+            }
+        }
+
+        private void DrawItemHighlights()
+        {
+            bool isStash = IsStashOpen();
+            var items = CollectItems(isStash);
+            var sortableIds = new HashSet<string>(items.Select(i => i.UniqueId));
+
+            foreach (var item in isStash ? Hud.Inventory.ItemsInStash : Hud.Inventory.ItemsInInventory)
+            {
+                if (item == null) continue;
+
+                var rect = Hud.Inventory.GetItemRect(item);
+                if (rect == RectangleF.Empty) continue;
+
+                // Only highlight items in current tab for stash
+                if (isStash)
+                {
+                    int page = Hud.Inventory.SelectedStashPageIndex;
+                    int tab = Hud.Inventory.SelectedStashTabIndex;
+                    int gridStartY = (page * Hud.Inventory.MaxStashTabCountPerPage + tab) * 10;
+                    if (item.InventoryY < gridStartY || item.InventoryY >= gridStartY + 10)
+                        continue;
+                }
+
+                if (sortableIds.Contains(item.ItemUniqueId))
+                {
+                    // Will be sorted - green highlight
+                    _highlightBrush.DrawRectangle(rect);
+                }
+                else if (IsProtected(item))
+                {
+                    // Protected - gold highlight
+                    _protectedBrush.DrawRectangle(rect);
+                }
             }
         }
 
@@ -451,6 +784,7 @@ namespace Turbo.Plugins.Custom.InventorySorter
                 case SortMode.ByType: return "Type";
                 case SortMode.BySize: return "Size";
                 case SortMode.Alphabetical: return "A-Z";
+                case SortMode.RowLocked: return "Row-Lock";
                 default: return "?";
             }
         }
@@ -580,6 +914,7 @@ namespace Turbo.Plugins.Custom.InventorySorter
         public uint SetSno;
         public int GemType;
         public int GemRank;
+        public int RowGroup; // For row-locked sorting
     }
 
     internal class MoveOp

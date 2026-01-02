@@ -1,15 +1,16 @@
-namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
+﻿namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
 {
     using SharpDX.DirectInput;
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Customizer for Natalya Spike Trap Macro
-    /// 
-    /// Edit this file to customize the macro settings!
+    /// Customizer for Natalya Spike Trap Macro - Optimized Version
     /// 
     /// F1 = Toggle ON/OFF
     /// F2 = Switch between PULL and DAMAGE mode
+    /// 
+    /// PULL MODE: Caltrops first → Wait for grouping → Traps → Detonate
+    /// DAMAGE MODE: Traps → Wait for arming → Detonate
     /// </summary>
     public class NatalyaSpikeTrapMacroCustomizer : BasePlugin, ICustomizer
     {
@@ -37,27 +38,38 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
                 // TRAP SETTINGS
                 // ========================================
                 
-                // PULL MODE: Place 2 traps, then Caltrops + Evasive Fire
-                // Used to gather enemies together before nuking
+                // PULL MODE: 2 traps (enemies are grouped, don't need as many)
                 plugin.PullModeTraps = 2;
 
-                // DAMAGE MODE: Place 5 traps, then Evasive Fire
-                // Optimal for maximum chain reaction damage (10 traps with Custom Engineering)
+                // DAMAGE MODE: 5 traps for optimal chain reaction
                 plugin.DamageModeTraps = 5;
 
 
                 // ========================================
-                // TIMING SETTINGS
+                // TIMING SETTINGS (CRITICAL FOR SMOOTH ROTATION)
                 // ========================================
                 
-                // Delay between trap placements (ms) - lower = faster
-                plugin.TrapPlacementDelay = 30;
+                // Delay between trap placements (ms)
+                // Too fast = traps may not register, too slow = DPS loss
+                plugin.TrapPlacementDelay = 80;
 
-                // Delay before detonating (ms)
-                plugin.DetonationDelay = 50;
+                // Time to wait after Caltrops for enemies to group (ms)
+                // This is key for PULL mode - enemies need time to walk to Caltrops
+                plugin.CaltropsWaitTime = 350;
 
-                // Delay between force movement commands (ms)
+                // Time to wait after placing traps before detonating (ms)
+                // Traps need to "arm" and enemies need to be standing on them
+                plugin.DetonationWaitTime = 200;
+
+                // How long to channel Evasive Fire for reliable detonation (ms)
+                plugin.DetonationDuration = 150;
+
+                // Time between force-move commands when no enemies (ms)
                 plugin.MovementDelay = 100;
+
+                // Delay before exiting combat state when no enemies (ms)
+                // Prevents cycling in/out of combat rapidly
+                plugin.CombatExitDelay = 600;
 
 
                 // ========================================
@@ -78,10 +90,14 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
                 // Range to detect enemies (yards)
                 plugin.EnemyDetectionRange = 50f;
 
-                // Minimum enemies to engage combat (1 = attack single targets)
+                // Range considered "close" for trap placement
+                // Used to check if enemies actually grouped up
+                plugin.CloseRange = 25f;
+
+                // Minimum enemies to start combat rotation
                 plugin.MinEnemiesForCombat = 1;
 
-                // Enable auto-movement when no enemies nearby
+                // Auto-move when no enemies nearby
                 plugin.EnableAutoMovement = true;
 
 
@@ -89,7 +105,7 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
                 // UI SETTINGS
                 // ========================================
                 
-                // Hide panel when macro is off (set to true to hide)
+                // Hide panel when macro is off
                 plugin.IsHideTip = false;
             });
         }

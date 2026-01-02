@@ -1,4 +1,4 @@
-namespace Turbo.Plugins.Custom.LoDDeathNovaMacro
+﻿namespace Turbo.Plugins.Custom.LoDDeathNovaMacro
 {
     using SharpDX.DirectInput;
     using Turbo.Plugins.Default;

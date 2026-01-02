@@ -1,4 +1,4 @@
-namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
+﻿namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
 {
     using System;
     using System.Linq;
@@ -7,12 +7,11 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Natalya Spike Trap Demon Hunter Macro
+    /// Natalya Spike Trap Demon Hunter Macro - Optimized Version
     /// 
     /// Build: https://maxroll.gg/d3/guides/natalya-spike-trap-demon-hunter-guide
     /// 
     /// IMPORTANT: This macro only activates when Spike Trap is equipped!
-    /// It will NOT show on GoD Strafe or other DH builds.
     /// 
     /// Skills:
     /// - Left Click: Evasive Fire (Hardened) - Detonates traps
@@ -25,10 +24,8 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
     /// F1 = Toggle macro ON/OFF
     /// F2 = Switch between PULL mode and DAMAGE mode
     /// 
-    /// PULL MODE: 2x Spike Trap + Caltrops + Evasive Fire (pulls enemies together)
-    /// DAMAGE MODE: 5x Spike Trap + Evasive Fire (maximum chain reaction damage)
-    /// 
-    /// When no enemies nearby: Uses Force Move to keep moving toward cursor
+    /// PULL MODE: Caltrops FIRST → Wait → Traps on pulled enemies → Detonate
+    /// DAMAGE MODE: Traps → Wait for settle → Detonate
     /// </summary>
     public class NatalyaSpikeTrapMacroPlugin : BasePlugin, IInGameTopPainter, IKeyEventHandler, IAfterCollectHandler
     {
@@ -39,24 +36,35 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
         public bool IsHideTip { get; set; } = false;
 
         /// <summary>
-        /// Number of Spike Traps to place in PULL mode (1-2 recommended)
+        /// Number of Spike Traps in PULL mode (2 is good, enemies are grouped)
         /// </summary>
         public int PullModeTraps { get; set; } = 2;
 
         /// <summary>
-        /// Number of Spike Traps to place in DAMAGE mode (5 for optimal chain reaction)
+        /// Number of Spike Traps in DAMAGE mode (5 for optimal chain reaction)
         /// </summary>
         public int DamageModeTraps { get; set; } = 5;
 
         /// <summary>
-        /// Delay between Spike Trap placements (ms)
+        /// Delay between Spike Trap placements (ms) - traps need time to register
         /// </summary>
-        public int TrapPlacementDelay { get; set; } = 30;
+        public int TrapPlacementDelay { get; set; } = 80;
 
         /// <summary>
-        /// Delay after placing all traps before detonating (ms)
+        /// Wait time after Caltrops for enemies to group up (ms)
         /// </summary>
-        public int DetonationDelay { get; set; } = 50;
+        public int CaltropsWaitTime { get; set; } = 350;
+
+        /// <summary>
+        /// Wait time after placing all traps before detonating (ms)
+        /// Traps need to "arm" and enemies need to be on them
+        /// </summary>
+        public int DetonationWaitTime { get; set; } = 200;
+
+        /// <summary>
+        /// Time to channel Evasive Fire for reliable detonation (ms)
+        /// </summary>
+        public int DetonationDuration { get; set; } = 150;
 
         /// <summary>
         /// Delay between force movement actions (ms)
@@ -79,7 +87,12 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
         public float EnemyDetectionRange { get; set; } = 50f;
 
         /// <summary>
-        /// Minimum number of enemies to trigger combat (0 = engage single targets)
+        /// Range considered "close" for trap placement
+        /// </summary>
+        public float CloseRange { get; set; } = 25f;
+
+        /// <summary>
+        /// Minimum number of enemies to trigger combat
         /// </summary>
         public int MinEnemiesForCombat { get; set; } = 1;
 
@@ -88,36 +101,42 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
         /// </summary>
         public bool EnableAutoMovement { get; set; } = true;
 
+        /// <summary>
+        /// Time to wait before exiting combat state (ms)
+        /// </summary>
+        public int CombatExitDelay { get; set; } = 600;
+
         #endregion
 
         #region Private Fields
 
         public bool Running { get; private set; }
-        public bool IsDamageMode { get; private set; } = true; // Default to damage mode
+        public bool IsDamageMode { get; private set; } = true;
         private bool _isDemonHunter = false;
         private bool _hasNatalyaSet = false;
-        private bool _hasSpikeTrapEquipped = false;  // Track if Spike Trap is equipped
-        private bool _isInCombat = false;  // Track combat state
+        private bool _hasSpikeTrapEquipped = false;
+        private bool _isInCombat = false;
 
         // Skill references
-        private IPlayerSkill _skillEvasiveFire;   // Left click - detonator
-        private IPlayerSkill _skillSpikeTrap;     // Right click - main damage
-        private IPlayerSkill _skillCaltrops;      // Slot 1 - pull
-        private IPlayerSkill _skillVengeance;     // Slot 2 - buff
-        private IPlayerSkill _skillSmokeScreen;   // Slot 3 - defense
-        private IPlayerSkill _skillShadowPower;   // Slot 4 - defense
+        private IPlayerSkill _skillEvasiveFire;
+        private IPlayerSkill _skillSpikeTrap;
+        private IPlayerSkill _skillCaltrops;
+        private IPlayerSkill _skillVengeance;
+        private IPlayerSkill _skillSmokeScreen;
+        private IPlayerSkill _skillShadowPower;
 
         // Timers
-        private IWatch _actionTimer;
+        private IWatch _phaseTimer;
         private IWatch _trapTimer;
-        private IWatch _cycleTimer;
         private IWatch _movementTimer;
-        private IWatch _combatExitTimer;  // Delay before exiting combat mode
+        private IWatch _combatExitTimer;
+        private IWatch _detonationTimer;
 
         // State
         private int _trapsPlaced = 0;
         private MacroPhase _phase = MacroPhase.Idle;
         private int _nearbyEnemyCount = 0;
+        private int _closeEnemyCount = 0;
 
         // Fonts
         private IFont _titleFont;
@@ -126,6 +145,7 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
         private IFont _stoppedFont;
         private IFont _tipFont;
         private IFont _movingFont;
+        private IFont _phaseFont;
 
         // UI
         private IUiElement _chatUI;
@@ -133,9 +153,6 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
         private IBrush _borderBrush;
         private IBrush _accentOnBrush;
         private IBrush _accentOffBrush;
-
-        // Combat exit delay (ms) - prevents flickering in/out of combat
-        private const int CombatExitDelay = 500;
 
         #endregion
 
@@ -152,11 +169,11 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
             ToggleKeyEvent = Hud.Input.CreateKeyEvent(true, Key.F1, false, false, false);
             ModeKeyEvent = Hud.Input.CreateKeyEvent(true, Key.F2, false, false, false);
 
-            _actionTimer = Hud.Time.CreateWatch();
+            _phaseTimer = Hud.Time.CreateWatch();
             _trapTimer = Hud.Time.CreateWatch();
-            _cycleTimer = Hud.Time.CreateWatch();
             _movementTimer = Hud.Time.CreateWatch();
             _combatExitTimer = Hud.Time.CreateWatch();
+            _detonationTimer = Hud.Time.CreateWatch();
 
             // UI Fonts
             _titleFont = Hud.Render.CreateFont("tahoma", 8, 255, 220, 180, 100, true, false, 180, 0, 0, 0, true);
@@ -165,8 +182,8 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
             _stoppedFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 255, 100, 100, true, false, 160, 0, 0, 0, true);
             _tipFont = Hud.Render.CreateFont("tahoma", 7, 200, 180, 180, 180, false, false, 140, 0, 0, 0, true);
             _movingFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 100, 180, 255, true, false, 160, 0, 0, 0, true);
+            _phaseFont = Hud.Render.CreateFont("tahoma", 6.5f, 200, 150, 150, 150, false, false, 130, 0, 0, 0, true);
 
-            // Panel styling (matches other plugins)
             _panelBrush = Hud.Render.CreateBrush(235, 15, 15, 25, 0);
             _borderBrush = Hud.Render.CreateBrush(200, 60, 60, 80, 1f);
             _accentOnBrush = Hud.Render.CreateBrush(255, 80, 200, 80, 0);
@@ -185,24 +202,17 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
             // F1 - Toggle ON/OFF
             if (ToggleKeyEvent.Matches(keyEvent) && keyEvent.IsPressed)
             {
-                if (Running)
-                {
-                    StopMacro();
-                }
-                else
-                {
-                    StartMacro();
-                }
+                if (Running) StopMacro();
+                else StartMacro();
             }
 
-            // F2 - Switch mode (only when running)
+            // F2 - Switch mode
             if (ModeKeyEvent.Matches(keyEvent) && keyEvent.IsPressed)
             {
                 if (Running)
                 {
                     IsDamageMode = !IsDamageMode;
-                    _phase = MacroPhase.PlacingTraps;
-                    _trapsPlaced = 0;
+                    ResetCombatCycle();
                 }
             }
         }
@@ -211,7 +221,6 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
         {
             if (!Hud.Game.IsInGame) return;
 
-            // Check if player is Demon Hunter
             _isDemonHunter = Hud.Game.Me.HeroClassDefinition.HeroClass == HeroClass.DemonHunter;
             if (!_isDemonHunter)
             {
@@ -220,11 +229,9 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
                 return;
             }
 
-            // Find skills and check for Natalya set
             FindSkills();
             CheckNatalyaSet();
 
-            // Check if Spike Trap is equipped - if not, stop macro and don't process
             _hasSpikeTrapEquipped = _skillSpikeTrap != null;
             if (!_hasSpikeTrapEquipped)
             {
@@ -233,20 +240,13 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
             }
 
             if (!Running) return;
+            if (ShouldPauseMacro()) return;
 
-            // Safety checks
-            if (ShouldPauseMacro())
-            {
-                return;
-            }
-
-            // Count nearby enemies
+            // Count enemies at different ranges
             _nearbyEnemyCount = Hud.Game.AliveMonsters.Count(m => m.CentralXyDistanceToMe <= EnemyDetectionRange);
+            _closeEnemyCount = Hud.Game.AliveMonsters.Count(m => m.CentralXyDistanceToMe <= CloseRange);
 
-            // Update combat state with hysteresis to prevent flickering
             UpdateCombatState();
-
-            // Run the macro
             ProcessMacro();
         }
 
@@ -256,21 +256,29 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
 
             if (hasEnoughEnemies)
             {
-                // Enter combat immediately when enemies detected
-                _isInCombat = true;
+                if (!_isInCombat)
+                {
+                    _isInCombat = true;
+                    ResetCombatCycle();
+                }
                 _combatExitTimer.Restart();
             }
             else if (_isInCombat)
             {
-                // Delay exiting combat to prevent flickering
                 if (_combatExitTimer.ElapsedMilliseconds >= CombatExitDelay)
                 {
                     _isInCombat = false;
-                    // Reset combat state
-                    _phase = MacroPhase.Idle;
-                    _trapsPlaced = 0;
+                    ResetCombatCycle();
                 }
             }
+        }
+
+        private void ResetCombatCycle()
+        {
+            _phase = MacroPhase.Idle;
+            _trapsPlaced = 0;
+            _phaseTimer.Restart();
+            _trapTimer.Restart();
         }
 
         private void FindSkills()
@@ -303,8 +311,7 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
 
         private void CheckNatalyaSet()
         {
-            // Check for Natalya's Vengeance set (6 piece bonus)
-            _hasNatalyaSet = Hud.Game.Me.GetSetItemCount(847985) >= 4; // Natalya set ID
+            _hasNatalyaSet = Hud.Game.Me.GetSetItemCount(847985) >= 4;
         }
 
         private bool ShouldPauseMacro()
@@ -327,18 +334,16 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
 
         private void ProcessMacro()
         {
-            // 1. ALWAYS keep buffs up (highest priority, even when moving)
+            // 1. Always maintain buffs
             RefreshBuffs();
 
-            // 2. Determine action based on combat state
+            // 2. Combat or Movement
             if (_isInCombat)
             {
-                // Execute combat rotation
                 ProcessCombat();
             }
             else
             {
-                // No enemies - use force movement
                 ProcessMovement();
             }
         }
@@ -347,27 +352,49 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
         {
             if (!EnableAutoMovement) return;
 
-            // Throttle movement commands
             if (_movementTimer.IsRunning && _movementTimer.ElapsedMilliseconds < MovementDelay)
                 return;
 
-            // Use force movement (ActionKey.Move) - moves toward cursor position
             Hud.Interaction.DoAction(ActionKey.Move);
             _movementTimer.Restart();
         }
 
         private void ProcessCombat()
         {
-            // Execute combat rotation based on phase
+            // === OPTIMIZED COMBAT ROTATION ===
+            // 
+            // PULL MODE:
+            // 1. Caltrops (pulls enemies)
+            // 2. WAIT for enemies to group (CaltropsWaitTime)
+            // 3. Place traps on grouped enemies
+            // 4. WAIT for traps to arm (DetonationWaitTime)
+            // 5. Detonate with Evasive Fire
+            //
+            // DAMAGE MODE:
+            // 1. Place traps
+            // 2. WAIT for traps to arm (DetonationWaitTime)
+            // 3. Detonate with Evasive Fire
+
             switch (_phase)
             {
                 case MacroPhase.Idle:
+                    StartCombatCycle();
+                    break;
+
+                case MacroPhase.Caltrops:
+                    ProcessCaltropsPhase();
+                    break;
+
+                case MacroPhase.WaitingForPull:
+                    ProcessWaitingForPull();
+                    break;
+
                 case MacroPhase.PlacingTraps:
                     ProcessPlacingTraps();
                     break;
 
-                case MacroPhase.PlacingCaltrops:
-                    ProcessPlacingCaltrops();
+                case MacroPhase.WaitingToDetonate:
+                    ProcessWaitingToDetonate();
                     break;
 
                 case MacroPhase.Detonating:
@@ -376,35 +403,55 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
             }
         }
 
-        private void RefreshBuffs()
+        private void StartCombatCycle()
         {
-            // Vengeance - keep up at all times
-            if (_skillVengeance != null && !_skillVengeance.IsOnCooldown)
+            if (IsDamageMode)
             {
-                double buffTime = _skillVengeance.BuffIsActive ? _skillVengeance.RemainingBuffTime() : 0;
-                if (buffTime < VengeanceRefreshTime)
+                // DAMAGE mode: Go straight to traps
+                _phase = MacroPhase.PlacingTraps;
+            }
+            else
+            {
+                // PULL mode: Start with Caltrops
+                _phase = MacroPhase.Caltrops;
+            }
+            _trapsPlaced = 0;
+            _phaseTimer.Restart();
+            _trapTimer.Restart();
+        }
+
+        private void ProcessCaltropsPhase()
+        {
+            // Cast Caltrops to pull enemies
+            if (_skillCaltrops != null && !_skillCaltrops.IsOnCooldown)
+            {
+                Hud.Interaction.DoAction(_skillCaltrops.Key);
+            }
+
+            // Move to waiting phase
+            _phase = MacroPhase.WaitingForPull;
+            _phaseTimer.Restart();
+        }
+
+        private void ProcessWaitingForPull()
+        {
+            // Wait for Caltrops to pull enemies together
+            if (_phaseTimer.ElapsedMilliseconds >= CaltropsWaitTime)
+            {
+                // Check if enemies actually grouped up (at least some close now)
+                if (_closeEnemyCount >= 1 || _phaseTimer.ElapsedMilliseconds >= CaltropsWaitTime + 200)
                 {
-                    Hud.Interaction.DoAction(_skillVengeance.Key);
+                    _phase = MacroPhase.PlacingTraps;
+                    _phaseTimer.Restart();
+                    _trapTimer.Restart();
                 }
             }
 
-            // Shadow Power - keep up when fighting or moving
-            if (_skillShadowPower != null && !_skillShadowPower.IsOnCooldown)
+            // Re-cast Caltrops if it's available (keeps pulling)
+            if (_skillCaltrops != null && !_skillCaltrops.IsOnCooldown && 
+                _phaseTimer.ElapsedMilliseconds > 150)
             {
-                double buffTime = _skillShadowPower.BuffIsActive ? _skillShadowPower.RemainingBuffTime() : 0;
-                if (buffTime < ShadowPowerRefreshTime)
-                {
-                    Hud.Interaction.DoAction(_skillShadowPower.Key);
-                }
-            }
-
-            // Smoke Screen - use when taking damage (emergency defense)
-            if (_skillSmokeScreen != null && !_skillSmokeScreen.IsOnCooldown)
-            {
-                if (Hud.Game.Me.Defense.HealthPct < 0.7)
-                {
-                    Hud.Interaction.DoAction(_skillSmokeScreen.Key);
-                }
+                Hud.Interaction.DoAction(_skillCaltrops.Key);
             }
         }
 
@@ -414,84 +461,95 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
 
             int targetTraps = IsDamageMode ? DamageModeTraps : PullModeTraps;
 
-            if (_trapTimer.ElapsedMilliseconds < TrapPlacementDelay && _trapTimer.IsRunning)
+            // Wait between trap placements
+            if (_trapTimer.ElapsedMilliseconds < TrapPlacementDelay && _trapsPlaced > 0)
                 return;
 
             if (_trapsPlaced < targetTraps)
             {
-                // Place Spike Trap
+                // Place trap at cursor position (should be on enemies)
                 Hud.Interaction.DoAction(_skillSpikeTrap.Key);
                 _trapsPlaced++;
                 _trapTimer.Restart();
             }
             else
             {
-                // All traps placed, move to next phase
-                if (IsDamageMode)
-                {
-                    // In damage mode, go straight to detonation
-                    _phase = MacroPhase.Detonating;
-                }
-                else
-                {
-                    // In pull mode, place Caltrops first
-                    _phase = MacroPhase.PlacingCaltrops;
-                }
-                _actionTimer.Restart();
+                // All traps placed - wait for them to arm
+                _phase = MacroPhase.WaitingToDetonate;
+                _phaseTimer.Restart();
             }
         }
 
-        private void ProcessPlacingCaltrops()
+        private void ProcessWaitingToDetonate()
         {
-            if (_skillCaltrops == null)
+            // Wait for traps to arm and enemies to be on them
+            if (_phaseTimer.ElapsedMilliseconds >= DetonationWaitTime)
             {
                 _phase = MacroPhase.Detonating;
-                _actionTimer.Restart();
-                return;
+                _detonationTimer.Restart();
             }
-
-            if (_actionTimer.ElapsedMilliseconds < DetonationDelay) return;
-
-            // Place Caltrops for pull effect
-            Hud.Interaction.DoAction(_skillCaltrops.Key);
-            
-            _phase = MacroPhase.Detonating;
-            _actionTimer.Restart();
         }
 
         private void ProcessDetonating()
         {
             if (_skillEvasiveFire == null) return;
 
-            if (_actionTimer.ElapsedMilliseconds < DetonationDelay) return;
-
-            // Detonate with Evasive Fire
+            // Keep firing Evasive Fire to ensure detonation
             Hud.Interaction.DoAction(_skillEvasiveFire.Key);
 
-            // In pull mode, also place Caltrops simultaneously for pull effect
-            if (!IsDamageMode && _skillCaltrops != null)
+            // In PULL mode, also keep casting Caltrops for more pulls
+            if (!IsDamageMode && _skillCaltrops != null && !_skillCaltrops.IsOnCooldown)
             {
                 Hud.Interaction.DoAction(_skillCaltrops.Key);
             }
 
-            // Reset for next cycle
-            _phase = MacroPhase.PlacingTraps;
-            _trapsPlaced = 0;
-            _cycleTimer.Restart();
+            // After detonation duration, start new cycle
+            if (_detonationTimer.ElapsedMilliseconds >= DetonationDuration)
+            {
+                _phase = MacroPhase.Idle;
+                _trapsPlaced = 0;
+            }
+        }
+
+        private void RefreshBuffs()
+        {
+            // Vengeance
+            if (_skillVengeance != null && !_skillVengeance.IsOnCooldown)
+            {
+                double buffTime = _skillVengeance.BuffIsActive ? _skillVengeance.RemainingBuffTime() : 0;
+                if (buffTime < VengeanceRefreshTime)
+                {
+                    Hud.Interaction.DoAction(_skillVengeance.Key);
+                }
+            }
+
+            // Shadow Power
+            if (_skillShadowPower != null && !_skillShadowPower.IsOnCooldown)
+            {
+                double buffTime = _skillShadowPower.BuffIsActive ? _skillShadowPower.RemainingBuffTime() : 0;
+                if (buffTime < ShadowPowerRefreshTime)
+                {
+                    Hud.Interaction.DoAction(_skillShadowPower.Key);
+                }
+            }
+
+            // Smoke Screen (emergency)
+            if (_skillSmokeScreen != null && !_skillSmokeScreen.IsOnCooldown)
+            {
+                if (Hud.Game.Me.Defense.HealthPct < 0.5)
+                {
+                    Hud.Interaction.DoAction(_skillSmokeScreen.Key);
+                }
+            }
         }
 
         private void StartMacro()
         {
-            // Double-check Spike Trap is equipped before starting
             if (!_hasSpikeTrapEquipped) return;
             
             Running = true;
-            _phase = MacroPhase.Idle;  // Start in idle, will transition based on enemies
-            _trapsPlaced = 0;
+            ResetCombatCycle();
             _isInCombat = false;
-            _actionTimer.Restart();
-            _trapTimer.Restart();
-            _cycleTimer.Restart();
             _movementTimer.Restart();
             _combatExitTimer.Restart();
         }
@@ -499,11 +557,8 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
         private void StopMacro()
         {
             Running = false;
-            _phase = MacroPhase.Idle;
-            _trapsPlaced = 0;
+            ResetCombatCycle();
             _isInCombat = false;
-            _actionTimer.Stop();
-            _trapTimer.Stop();
             _movementTimer.Stop();
         }
 
@@ -512,8 +567,6 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
             if (clipState != ClipState.AfterClip) return;
             if (!Hud.Game.IsInGame) return;
             if (!_isDemonHunter) return;
-            
-            // Only show UI if Spike Trap is equipped
             if (!_hasSpikeTrapEquipped) return;
 
             if (Hud.Inventory.InventoryMainUiElement.Visible && Running)
@@ -528,10 +581,9 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
 
         private void DrawStatusPanel()
         {
-            // Get player screen position for centered display below character
             var playerScreenPos = Hud.Game.Me.FloorCoordinate.ToScreenCoordinate();
             float centerX = playerScreenPos.X;
-            float baseY = playerScreenPos.Y + 10; // Offset below character
+            float baseY = playerScreenPos.Y + 10;
 
             if (Running)
             {
@@ -540,25 +592,32 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
                 _titleFont.DrawText(layout1, centerX - layout1.Metrics.Width / 2, baseY);
                 baseY += layout1.Metrics.Height + 2;
 
-                // Combat state indicator
                 if (_isInCombat)
                 {
-                    var layout2 = _runningFont.GetTextLayout($"● COMBAT ({_nearbyEnemyCount})");
+                    // Combat status
+                    var layout2 = _runningFont.GetTextLayout($"● COMBAT ({_closeEnemyCount}/{_nearbyEnemyCount})");
                     _runningFont.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
                     baseY += layout2.Metrics.Height + 2;
 
-                    // Mode indicator
-                    string modeText = IsDamageMode ? "DAMAGE (5 traps)" : "PULL (2 traps)";
-                    var modeLayout = _modeFont.GetTextLayout(modeText);
+                    // Mode
+                    string modeText = IsDamageMode ? "DAMAGE" : "PULL";
+                    int trapCount = IsDamageMode ? DamageModeTraps : PullModeTraps;
+                    var modeLayout = _modeFont.GetTextLayout($"{modeText} ({trapCount} traps)");
                     _modeFont.DrawText(modeLayout, centerX - modeLayout.Metrics.Width / 2, baseY);
+                    baseY += modeLayout.Metrics.Height + 2;
+
+                    // Phase indicator
+                    string phaseText = GetPhaseText();
+                    var phaseLayout = _phaseFont.GetTextLayout(phaseText);
+                    _phaseFont.DrawText(phaseLayout, centerX - phaseLayout.Metrics.Width / 2, baseY);
                 }
                 else
                 {
+                    // Moving status
                     var layout2 = _movingFont.GetTextLayout("● MOVING");
                     _movingFont.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
                     baseY += layout2.Metrics.Height + 2;
 
-                    // Show mode for reference
                     string modeText = IsDamageMode ? "[F2] DAMAGE" : "[F2] PULL";
                     var modeLayout = _tipFont.GetTextLayout(modeText);
                     _tipFont.DrawText(modeLayout, centerX - modeLayout.Metrics.Width / 2, baseY);
@@ -566,7 +625,7 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
             }
             else
             {
-                // OFF state - minimal display
+                // OFF state
                 var layout1 = _titleFont.GetTextLayout("N6 Spike Trap");
                 _titleFont.DrawText(layout1, centerX - layout1.Metrics.Width / 2, baseY);
                 baseY += layout1.Metrics.Height + 2;
@@ -575,13 +634,28 @@ namespace Turbo.Plugins.Custom.NatalyaSpikeTrapMacro
                 _stoppedFont.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
             }
         }
+
+        private string GetPhaseText()
+        {
+            switch (_phase)
+            {
+                case MacroPhase.Caltrops: return "Pulling...";
+                case MacroPhase.WaitingForPull: return "Grouping...";
+                case MacroPhase.PlacingTraps: return $"Traps {_trapsPlaced}/{(IsDamageMode ? DamageModeTraps : PullModeTraps)}";
+                case MacroPhase.WaitingToDetonate: return "Arming...";
+                case MacroPhase.Detonating: return "BOOM!";
+                default: return "";
+            }
+        }
     }
 
     internal enum MacroPhase
     {
         Idle,
-        PlacingTraps,
-        PlacingCaltrops,
-        Detonating
+        Caltrops,           // Cast Caltrops to pull
+        WaitingForPull,     // Wait for enemies to group
+        PlacingTraps,       // Place Spike Traps
+        WaitingToDetonate,  // Wait for traps to arm
+        Detonating          // Fire Evasive Fire
     }
 }

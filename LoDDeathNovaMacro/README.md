@@ -6,28 +6,6 @@ Ultimate auto-combat macro for the Legacy of Dreams Blood Nova build.
 
 ---
 
-## ?? Installation
-
-1. Copy the `LoDDeathNovaMacro` folder to:
-   ```
-   TurboHUD\plugins\Custom\
-   ```
-
-2. Your folder structure should look like:
-   ```
-   TurboHUD\
-   ??? plugins\
-       ??? Custom\
-           ??? LoDDeathNovaMacro\
-               ??? LoDDeathNovaMacroPlugin.cs
-               ??? LoDDeathNovaMacroCustomizer.cs
-               ??? README.md
-   ```
-
-3. Restart TurboHUD
-
----
-
 ## ?? CRITICAL BUILD MECHANIC
 
 **Death Nova is NOT cast manually!**

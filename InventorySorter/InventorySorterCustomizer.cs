@@ -1,10 +1,16 @@
-namespace Turbo.Plugins.Custom.InventorySorter
+﻿namespace Turbo.Plugins.Custom.InventorySorter
 {
     using SharpDX.DirectInput;
     using Turbo.Plugins.Default;
 
     /// <summary>
     /// Customizer for Inventory Sorter Plugin
+    /// 
+    /// Hotkeys:
+    /// - K = Start sorting (or cancel if running)
+    /// - Shift+K = Cycle sort mode
+    /// - Ctrl+K = Open configuration panel
+    /// - ESC = Cancel sorting / Close config
     /// </summary>
     public class InventorySorterCustomizer : BasePlugin, ICustomizer
     {
@@ -18,7 +24,7 @@ namespace Turbo.Plugins.Custom.InventorySorter
             Hud.RunOnPlugin<InventorySorterPlugin>(plugin =>
             {
                 // ========================================
-                // KEY BINDINGS (Keyboard only - no mouse!)
+                // KEY BINDINGS
                 // ========================================
                 
                 // K = Sort (also cancels if running)
@@ -27,7 +33,10 @@ namespace Turbo.Plugins.Custom.InventorySorter
                 // Shift+K = Cycle through sort modes
                 plugin.ModeKey = Hud.Input.CreateKeyEvent(true, Key.K, false, false, true);
                 
-                // ESC = Cancel sorting
+                // Ctrl+K = Open configuration panel
+                plugin.ConfigKey = Hud.Input.CreateKeyEvent(true, Key.K, true, false, false);
+                
+                // ESC = Cancel sorting / Close config
                 plugin.CancelKey = Hud.Input.CreateKeyEvent(true, Key.Escape, false, false, false);
 
 
@@ -46,6 +55,51 @@ namespace Turbo.Plugins.Custom.InventorySorter
                 
                 // Don't move socketed items
                 plugin.Config.ProtectSocketedItems = false;
+
+
+                // ========================================
+                // SORTING RULES
+                // ========================================
+                
+                // Sort highest quality items first
+                plugin.Config.SortByQualityFirst = true;
+                
+                // Group set items together
+                plugin.Config.GroupSets = true;
+                
+                // Group gems by color
+                plugin.Config.GroupGemsByColor = true;
+                
+                // Always put Primals at the top
+                plugin.Config.PrimalsFirst = true;
+
+
+                // ========================================
+                // TIMING SETTINGS (adjust if too fast/slow)
+                // ========================================
+                
+                // Delay when moving items (ms)
+                plugin.Config.MoveDelayMs = 50;
+                
+                // Delay between clicks (ms)
+                plugin.Config.ClickDelayMs = 30;
+                
+                // Wait after each move (ms)
+                plugin.Config.WaitAfterMoveMs = 20;
+
+
+                // ========================================
+                // UI SETTINGS
+                // ========================================
+                
+                // Show green/gold highlights on items
+                plugin.Config.ShowHighlights = true;
+                
+                // Show progress during sorting
+                plugin.Config.ShowProgress = true;
+                
+                // Ask for confirmation before sorting
+                plugin.Config.ConfirmBeforeSort = false;
             });
         }
     }
