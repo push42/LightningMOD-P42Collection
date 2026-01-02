@@ -4,14 +4,17 @@
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Customizer for LoD Death Nova (Blood Nova) Necromancer Macro
-    /// 
-    /// IMPORTANT: This build does NOT manually cast Death Nova!
-    /// Iron Rose auto-casts Blood Nova while you channel Siphon Blood.
+    /// Customizer for LoD Death Nova Macro - Optimized Version
     /// 
     /// F1 = Toggle ON/OFF
     /// F2 = Switch between SPEED and PUSH mode
-    /// F3 = Force Nuke (manual CoE sync override)
+    /// F3 = Force Nuke (spam Death Nova)
+    /// 
+    /// SPEED MODE: Auto-move + Continuous Siphon Blood (Iron Rose procs)
+    ///             Best for: Simulacrum + Haunted Visions builds
+    /// 
+    /// PUSH MODE: Auto-move + Manual Death Nova in packs + Siphon on boss
+    ///            Best for: Nayr's + Squirt's (no Simulacrum) builds
     /// </summary>
     public class LoDDeathNovaMacroCustomizer : BasePlugin, ICustomizer
     {
@@ -33,78 +36,94 @@
                 
                 // F2 = Switch between SPEED and PUSH mode
                 plugin.ModeKeyEvent = Hud.Input.CreateKeyEvent(true, Key.F2, false, false, false);
-
-                // F3 = Force Nuke (bypass CoE timing in push mode)
+                
+                // F3 = Force Nuke (manual Death Nova spam)
                 plugin.ForceNukeKeyEvent = Hud.Input.CreateKeyEvent(true, Key.F3, false, false, false);
-
-
-                // ========================================
-                // CoE TIMING SETTINGS (PUSH MODE)
-                // ========================================
-
-                // Physical CoE icon index (Necromancer: Cold=2, Physical=6, Poison=7)
-                plugin.PhysicalCoEIconIndex = 6;
-
-                // Seconds before Physical CoE to start preparing
-                // Use this time to position Simulacrums and stack Funerary Pick
-                plugin.PrePhysicalPrepSeconds = 1.0f;
-
-                // Minimum Funerary Pick stacks before nuking (0-10)
-                // Each stack = 20% damage, 10 stacks = 200% bonus
-                plugin.MinFuneraryPickStacks = 5;
-
-                // Minimum enemies nearby to trigger CoE nuke in push mode
-                // More enemies = more Bloodtide Blade damage (400% per enemy up to 4000%)
-                plugin.MinEnemiesForCoENuke = 3;
-
-
-                // ========================================
-                // BUFF REFRESH SETTINGS
-                // ========================================
-
-                // Bone Armor refresh threshold (seconds remaining)
-                // Bone Armor gives up to 30% DR from 10 stacks
-                // Also applies STUN for Krysbin's 300% bonus
-                plugin.BoneArmorRefreshTime = 5.0f;
 
 
                 // ========================================
                 // COMBAT SETTINGS
                 // ========================================
-
-                // Range to detect enemies (yards)
+                
+                // Enemy detection range (yards)
                 plugin.EnemyDetectionRange = 60f;
-
-                // Range to detect elites for priority targeting
+                
+                // Elite detection range (yards)
                 plugin.EliteDetectionRange = 40f;
+                
+                // Close range for Death Nova / combat (yards)
+                plugin.CloseRange = 25f;
+                
+                // Bloodtide Blade range for stack counting (yards)
+                plugin.BloodtideRange = 25f;
+                
+                // Minimum enemies to trigger Death Nova spam (large packs)
+                plugin.MinEnemiesForNovaNuke = 5;
 
-                // Health percent to trigger emergency Blood Rush
+
+                // ========================================
+                // TIMING SETTINGS (CRITICAL)
+                // ========================================
+                
+                // Death Nova spam count during nuke phase
+                plugin.DeathNovaSpamCount = 5;
+                
+                // Delay between Death Nova casts (ms)
+                plugin.DeathNovaDelay = 100;
+                
+                // Delay after Bone Armor before nuking (ms)
+                // Ensures stun applies for Krysbin's 300%
+                plugin.BoneArmorWaitTime = 150;
+                
+                // Time to channel Siphon Blood after novas (ms)
+                plugin.SiphonChannelTime = 400;
+                
+                // Force movement delay when no enemies (ms)
+                plugin.MovementDelay = 100;
+                
+                // Combat exit delay to prevent flickering (ms)
+                plugin.CombatExitDelay = 600;
+
+
+                // ========================================
+                // BUFF SETTINGS
+                // ========================================
+                
+                // Bone Armor refresh threshold (seconds remaining)
+                plugin.BoneArmorRefreshTime = 5.0f;
+                
+                // Minimum Funerary Pick stacks before nuking
+                plugin.MinFuneraryPickStacks = 5;
+
+
+                // ========================================
+                // DEFENSE SETTINGS
+                // ========================================
+                
+                // Health percent for emergency Blood Rush
                 plugin.EmergencyBloodRushHealthPct = 0.35f;
 
-                // Bloodtide Blade range for stacking (yards)
-                // Default is 25 yards matching the item effect
-                // Each enemy = +400% Death Nova damage (up to 10 = 4000%)
-                plugin.BloodtideRange = 25f;
+
+                // ========================================
+                // COE SETTINGS (for reference, currently push mode uses enemy count)
+                // ========================================
+                
+                // Physical CoE index for Necromancer (6 = Physical)
+                plugin.PhysicalCoEIconIndex = 6;
+                
+                // Seconds before Physical to prepare
+                plugin.PrePhysicalPrepSeconds = 1.0f;
 
 
                 // ========================================
-                // TIMING SETTINGS
+                // UI SETTINGS
                 // ========================================
-
-                // Delay between skill casts (ms)
-                plugin.CastDelay = 50;
-
-
-                // ========================================
-                // UI / FEATURE SETTINGS
-                // ========================================
-
+                
+                // Enable Oculus Ring circle detection
+                plugin.EnableOculusDetection = true;
+                
                 // Hide panel when macro is off
                 plugin.IsHideTip = false;
-
-                // Enable Oculus Ring circle detection and indicator
-                // Oculus Ring gives +85% damage when standing in the circle
-                plugin.EnableOculusDetection = true;
             });
         }
     }
