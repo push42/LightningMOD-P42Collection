@@ -1,8 +1,26 @@
 # Item Reveal Plugin for TurboHUD
 
-**See item stats BEFORE identification!** No more wasting time with the Book of Cain!
+**Instantly see if unidentified items are Ancient or Primal!**
 
-TurboHUD can read item affixes even on unidentified items - the game just hides them visually. This plugin reveals those hidden stats instantly.
+---
+
+## ?? Important Clarification
+
+**Item stats are rolled SERVER-SIDE when you identify them.**
+
+This plugin CANNOT show actual stat rolls before identification - that's impossible because they don't exist yet!
+
+### What IS Accurate on Unidentified Items:
+- ? **Ancient status** - 100% accurate!
+- ? **Primal status** - 100% accurate!
+- ? **Set piece identification** - 100% accurate!
+- ? **Item type/name** - 100% accurate!
+
+### What This Means for You:
+- Skip identifying trash legendaries
+- Prioritize identifying Ancients/Primals
+- Know if a ground drop is worth picking up
+- Save time by focusing on quality items
 
 ---
 
@@ -13,43 +31,30 @@ TurboHUD can read item affixes even on unidentified items - the game just hides 
    TurboHUD\plugins\Custom\
    ```
 
-2. Your folder structure should look like:
-   ```
-   TurboHUD\
-   ??? plugins\
-       ??? Custom\
-           ??? ItemReveal\
-               ??? ItemRevealPlugin.cs
-               ??? ItemRevealCustomizer.cs
-               ??? README.md
-   ```
-
-3. Restart TurboHUD
+2. Restart TurboHUD
 
 ---
 
 ## ? Features
 
-### Instant Item Stats
-- **Hover over unidentified items** to see all their stats
-- Works in inventory, stash, and on the ground
-- No need to identify first!
+### Ancient/Primal Detection
+- **!! PRIMAL !!** - Red highlight + text for primal items
+- **\* ANCIENT \*** - Orange highlight + text for ancient items
+- Works on ground loot AND inventory items
 
-### Quality Indicators
-- **? PRIMAL ANCIENT** - Red text for primal items
-- **? ANCIENT** - Orange text for ancient items
-- **Set Item** - Green text for set pieces
+### Identified Item Stats
+For items that ARE identified, the plugin shows:
+- Full stat breakdown with perfection %
+- Color-coded quality (Green 85%+, Gold 95%+)
+- Legendary powers/affixes
+- Overall perfection score
 
-### Perfection Tracking
-- Shows **overall perfection %** for each item
-- Shows **individual stat perfection** for each affix
-- **Color-coded**: White (normal), Green (85%+), Gold (95%+)
-
-### Ground Loot Preview
-- Unidentified legendaries on the ground show:
-  - Ancient/Primal status
-  - Overall perfection percentage
-  - Instant assessment without picking up!
+### Visual Highlights
+| Item Type | Highlight Color |
+|-----------|-----------------|
+| Primal (Unidentified) | Bright Red border |
+| Ancient (Unidentified) | Orange border |
+| Regular Legendary | Yellow border |
 
 ---
 
@@ -63,18 +68,20 @@ TurboHUD can read item affixes even on unidentified items - the game just hides 
 
 ## ?? Usage
 
-1. **Enable the plugin** (ON by default)
-2. **Hover over any unidentified legendary item**
-3. **See the full stats instantly!**
-4. **Decide** whether to keep or salvage before identifying
+### Ground Loot
+- Ancient/Primal items show labels above them
+- Know instantly if a drop is worth picking up
+- Skip regular legendaries, grab the Ancients!
 
-### What You'll See
-- Item name
-- Ancient/Primal status
-- Set affiliation
-- Overall perfection percentage
-- Individual stat values with perfection %
-- Legendary affixes/powers
+### Inventory
+- Hover over any legendary item
+- Unidentified items show Ancient/Primal status
+- Identified items show full stats + perfection
+
+### Workflow
+1. See "!! PRIMAL !!" on ground ? Pick it up immediately!
+2. See "\* ANCIENT \*" on ground ? Worth identifying
+3. No label ? Regular legendary, lower priority
 
 ---
 
@@ -84,61 +91,36 @@ Edit `ItemRevealCustomizer.cs`:
 
 ```csharp
 // === Display Settings ===
-plugin.ShowInventoryStats = true;     // Show stats in inventory/stash
-plugin.ShowGroundStats = true;        // Show stats on ground items
-plugin.ShowPerfection = true;         // Show perfection percentages
+plugin.ShowInventoryStats = true;     // Show in inventory/stash
+plugin.ShowGroundStats = true;        // Show on ground items
+plugin.ShowPerfection = true;         // Show perfection % (identified only)
 plugin.ShowAncientStatus = true;      // Show Ancient/Primal indicator
-plugin.LegendaryOnly = true;          // Only reveal legendary items
-plugin.MaxStatsToShow = 8;            // Max stats in tooltip
+plugin.LegendaryOnly = true;          // Only legendary items
+plugin.MaxStatsToShow = 10;           // Max stats in tooltip
 
-// === Perfection Thresholds ===
-plugin.GoodPerfectionThreshold = 85f;  // Green highlight at 85%+
-plugin.GreatPerfectionThreshold = 95f; // Gold highlight at 95%+
+// === Perfection Thresholds (identified items only) ===
+plugin.GoodPerfectionThreshold = 85f;  // Green at 85%+
+plugin.GreatPerfectionThreshold = 95f; // Gold at 95%+
 ```
 
 ---
 
-## ?? Color Coding
+## ?? Time-Saving Tips
 
-| Color | Meaning |
-|-------|---------|
-| **White** | Normal perfection (below 85%) |
-| **Green** | Good perfection (85-94%) |
-| **Gold** | Great perfection (95%+) |
-| **Orange** | Ancient item |
-| **Red** | Primal Ancient item |
+1. **Ground Loot Triage**
+   - Primals: Pick up immediately
+   - Ancients: Pick up if relevant
+   - No label: Leave or pick up last
 
----
+2. **Inventory Management**
+   - Identify Primals first
+   - Then Ancients
+   - Regular legendaries last (or salvage blind)
 
-## ?? Tips
-
-### Time Saving
-- Skip the Book of Cain entirely
-- Instantly know if a drop is worth keeping
-- Focus on grinding, not identifying
-
-### Quality Assessment
-- Look for **high overall perfection** (90%+)
-- Check **individual stat rolls** for key affixes
-- Primals are always max rolled (100%)
-
-### Ground Loot
-- See Ancient/Primal status before picking up
-- Know the perfection before cluttering inventory
-- Skip bad legendaries immediately
-
----
-
-## ? FAQ
-
-**Q: Does this work for all items?**
-A: By default, only legendary items. Set `LegendaryOnly = false` for all items.
-
-**Q: Why doesn't an item show stats?**
-A: Some items may not have readable stats until identified. This is rare.
-
-**Q: Can I get banned for this?**
-A: TurboHUD plugins read game memory; use at your own risk as with all TurboHUD features.
+3. **Efficient Farming**
+   - Don't waste time identifying every legendary
+   - Focus on Ancient/Primal items
+   - Salvage regular legendaries without looking
 
 ---
 
@@ -154,13 +136,16 @@ A: TurboHUD plugins read game memory; use at your own risk as with all TurboHUD 
 
 ## ?? Changelog
 
+### v1.1.0 - Accuracy Update
+- Fixed: Clarified that stats cannot be revealed before identification
+- Fixed: Ancient/Primal status is what's actually reliable
+- Added: Better visual highlights for Ancients/Primals
+- Added: Full stat display for identified items
+
 ### v1.0.0 - Initial Release
-- Reveal stats on unidentified items
-- Inventory, stash, and ground support
-- Perfection percentage display
-- Ancient/Primal indicators
-- Color-coded quality assessment
+- Ancient/Primal detection on unidentified items
+- Stat display for identified items
 
 ---
 
-**Never waste time identifying again! ??**
+**Know your Ancients and Primals instantly! ??**

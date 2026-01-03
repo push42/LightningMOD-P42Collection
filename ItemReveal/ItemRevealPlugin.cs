@@ -9,68 +9,37 @@
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Item Reveal Plugin - Shows item stats BEFORE identification!
+    /// Item Reveal Plugin - Shows Ancient/Primal status on UNIDENTIFIED items!
     /// 
-    /// TurboHUD can read item affixes even on unidentified items.
-    /// This plugin displays the stats so you know immediately if an item is worth keeping.
+    /// IMPORTANT: Item stats are rolled SERVER-SIDE when you identify them.
+    /// We CANNOT see the actual stat rolls before identification.
     /// 
-    /// Features:
-    /// - Shows stats on unidentified items in inventory
-    /// - Shows stats on unidentified items on the ground
-    /// - Highlights good rolls (perfection %)
-    /// - Ancient/Primal indicator for unidentified items
-    /// - Perfection score calculation
+    /// What this plugin CAN reliably show on unidentified items:
+    /// - Ancient/Primal status (100% accurate!)
+    /// - Set piece identification
+    /// - Item type/name
     /// 
-    /// No more wasting time with the Book of Cain!
+    /// What this plugin shows on IDENTIFIED items:
+    /// - Full stat breakdown with perfection %
+    /// - Legendary powers
+    /// - Color-coded quality assessment
+    /// 
+    /// This saves time by letting you know if an unidentified item is Ancient/Primal
+    /// before wasting time identifying trash legendaries!
     /// </summary>
     public class ItemRevealPlugin : BasePlugin, IInGameTopPainter, IKeyEventHandler, IInGameWorldPainter
     {
         #region Settings
 
-        /// <summary>
-        /// Key to toggle the reveal panel on/off
-        /// </summary>
         public IKeyEvent ToggleKeyEvent { get; set; }
-
-        /// <summary>
-        /// Show stats on unidentified items in inventory
-        /// </summary>
         public bool ShowInventoryStats { get; set; } = true;
-
-        /// <summary>
-        /// Show stats on unidentified items on the ground
-        /// </summary>
         public bool ShowGroundStats { get; set; } = true;
-
-        /// <summary>
-        /// Show perfection percentage
-        /// </summary>
         public bool ShowPerfection { get; set; } = true;
-
-        /// <summary>
-        /// Minimum perfection to highlight as "good" (0-100)
-        /// </summary>
         public float GoodPerfectionThreshold { get; set; } = 85f;
-
-        /// <summary>
-        /// Minimum perfection to highlight as "great" (0-100)
-        /// </summary>
         public float GreatPerfectionThreshold { get; set; } = 95f;
-
-        /// <summary>
-        /// Show Ancient/Primal status on unidentified items
-        /// </summary>
         public bool ShowAncientStatus { get; set; } = true;
-
-        /// <summary>
-        /// Only show for legendary items
-        /// </summary>
         public bool LegendaryOnly { get; set; } = true;
-
-        /// <summary>
-        /// Maximum stats to show in tooltip
-        /// </summary>
-        public int MaxStatsToShow { get; set; } = 8;
+        public int MaxStatsToShow { get; set; } = 10;
 
         #endregion
 
@@ -89,6 +58,7 @@
         private IFont _primalFont;
         private IFont _setFont;
         private IFont _hintFont;
+        private IFont _warningFont;
 
         // Brushes
         private IBrush _panelBrush;
@@ -97,6 +67,8 @@
         private IBrush _ancientBorderBrush;
         private IBrush _primalBorderBrush;
         private IBrush _unidentifiedBrush;
+        private IBrush _ancientHighlightBrush;
+        private IBrush _primalHighlightBrush;
 
         // UI
         private IUiElement _inventoryElement;
@@ -121,18 +93,21 @@
             _perfectionFont = Hud.Render.CreateFont("tahoma", 7, 255, 180, 180, 180, false, false, 160, 0, 0, 0, true);
             _goodPerfectionFont = Hud.Render.CreateFont("tahoma", 7, 255, 100, 255, 100, true, false, 160, 0, 0, 0, true);
             _greatPerfectionFont = Hud.Render.CreateFont("tahoma", 7, 255, 255, 200, 50, true, false, 160, 0, 0, 0, true);
-            _ancientFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 255, 150, 50, true, false, 180, 0, 0, 0, true);
-            _primalFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 255, 50, 50, true, false, 180, 0, 0, 0, true);
+            _ancientFont = Hud.Render.CreateFont("tahoma", 8, 255, 255, 150, 50, true, false, 200, 0, 0, 0, true);
+            _primalFont = Hud.Render.CreateFont("tahoma", 8, 255, 255, 50, 50, true, false, 200, 0, 0, 0, true);
             _setFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 0, 255, 0, true, false, 180, 0, 0, 0, true);
             _hintFont = Hud.Render.CreateFont("tahoma", 6.5f, 200, 150, 150, 150, false, false, 140, 0, 0, 0, true);
+            _warningFont = Hud.Render.CreateFont("tahoma", 6.5f, 200, 255, 200, 100, false, true, 140, 0, 0, 0, true);
 
             // Brushes
             _panelBrush = Hud.Render.CreateBrush(240, 15, 15, 25, 0);
             _borderBrush = Hud.Render.CreateBrush(255, 60, 60, 80, 1.5f);
             _legendaryBorderBrush = Hud.Render.CreateBrush(255, 255, 128, 0, 2f);
             _ancientBorderBrush = Hud.Render.CreateBrush(255, 255, 170, 50, 2f);
-            _primalBorderBrush = Hud.Render.CreateBrush(255, 255, 50, 50, 2f);
-            _unidentifiedBrush = Hud.Render.CreateBrush(150, 255, 255, 0, 2f);
+            _primalBorderBrush = Hud.Render.CreateBrush(255, 255, 50, 50, 2.5f);
+            _unidentifiedBrush = Hud.Render.CreateBrush(120, 255, 255, 0, 2f);
+            _ancientHighlightBrush = Hud.Render.CreateBrush(150, 255, 170, 50, 3f);
+            _primalHighlightBrush = Hud.Render.CreateBrush(180, 255, 50, 50, 3f);
 
             _inventoryElement = Hud.Inventory.InventoryMainUiElement;
         }
@@ -156,11 +131,14 @@
             foreach (var item in Hud.Game.Items.Where(i => i.Location == ItemLocation.Floor))
             {
                 if (!ShouldShowStats(item)) continue;
-                if (!item.Unidentified) continue;
 
-                // Draw indicator on ground items
                 var screenCoord = item.FloorCoordinate.ToScreenCoordinate();
-                DrawUnidentifiedIndicator(item, screenCoord.X, screenCoord.Y - 30);
+                
+                // Show Ancient/Primal indicator above ground items
+                if (item.Unidentified)
+                {
+                    DrawUnidentifiedGroundLabel(item, screenCoord.X, screenCoord.Y - 35);
+                }
             }
         }
 
@@ -171,7 +149,6 @@
 
             if (clipState == ClipState.BeforeClip)
             {
-                // Draw status indicator
                 DrawStatusIndicator();
             }
 
@@ -179,7 +156,6 @@
             if (!ShowInventoryStats) return;
             if (!_inventoryElement.Visible) return;
 
-            // Find hovered item
             _hoveredItem = null;
             int mouseX = Hud.Window.CursorX;
             int mouseY = Hud.Window.CursorY;
@@ -192,13 +168,17 @@
                 var rect = Hud.Inventory.GetItemRect(item);
                 if (rect == RectangleF.Empty) continue;
 
-                // Highlight unidentified items
+                // Highlight unidentified ancients/primals
                 if (item.Unidentified)
                 {
-                    _unidentifiedBrush.DrawRectangle(rect);
+                    if (item.AncientRank == 2)
+                        _primalHighlightBrush.DrawRectangle(rect);
+                    else if (item.AncientRank == 1)
+                        _ancientHighlightBrush.DrawRectangle(rect);
+                    else
+                        _unidentifiedBrush.DrawRectangle(rect);
                 }
 
-                // Check if mouse is over this item
                 if (mouseX >= rect.X && mouseX <= rect.X + rect.Width &&
                     mouseY >= rect.Y && mouseY <= rect.Y + rect.Height)
                 {
@@ -206,7 +186,7 @@
                 }
             }
 
-            // Check stash items if stash is open
+            // Check stash items
             if (Hud.Inventory.StashMainUiElement?.Visible == true)
             {
                 foreach (var item in Hud.Inventory.ItemsInStash)
@@ -218,7 +198,12 @@
 
                     if (item.Unidentified)
                     {
-                        _unidentifiedBrush.DrawRectangle(rect);
+                        if (item.AncientRank == 2)
+                            _primalHighlightBrush.DrawRectangle(rect);
+                        else if (item.AncientRank == 1)
+                            _ancientHighlightBrush.DrawRectangle(rect);
+                        else
+                            _unidentifiedBrush.DrawRectangle(rect);
                     }
 
                     if (mouseX >= rect.X && mouseX <= rect.X + rect.Width &&
@@ -229,10 +214,9 @@
                 }
             }
 
-            // Draw stats tooltip for hovered item
             if (_hoveredItem != null)
             {
-                DrawItemStatsTooltip(_hoveredItem, mouseX + 20, mouseY);
+                DrawItemTooltip(_hoveredItem, mouseX + 20, mouseY);
             }
         }
 
@@ -247,7 +231,7 @@
         {
             float x = Hud.Window.Size.Width * 0.005f;
             float y = Hud.Window.Size.Height * 0.70f;
-            float w = 110;
+            float w = 120;
             float h = 32;
 
             _panelBrush.DrawRectangle(x, y, w, h);
@@ -262,64 +246,51 @@
             statusFont.DrawText(statusLayout, x + 6, y + 4 + titleLayout.Metrics.Height);
         }
 
-        private void DrawUnidentifiedIndicator(IItem item, float x, float y)
+        private void DrawUnidentifiedGroundLabel(IItem item, float x, float y)
         {
-            // Show Ancient/Primal status and perfection above ground items
-            string text = "";
-            IFont font = _statFont;
+            string text;
+            IFont font;
 
             if (item.AncientRank == 2)
             {
-                text = "PRIMAL";
+                text = "!! PRIMAL !!";
                 font = _primalFont;
             }
             else if (item.AncientRank == 1)
             {
-                text = "ANCIENT";
+                text = "* ANCIENT *";
                 font = _ancientFont;
             }
             else if (item.SetSno != 0)
             {
-                text = "SET";
+                text = "[SET]";
                 font = _setFont;
             }
             else
             {
-                text = "LEGENDARY";
-                font = _titleFont;
-            }
-
-            // Add perfection if available
-            if (ShowPerfection && item.Perfection > 0)
-            {
-                float perf = (float)(item.Perfection * 100);
-                text += string.Format(" {0:F0}%", perf);
+                return; // Don't show for regular legendaries on ground
             }
 
             var layout = font.GetTextLayout(text);
             font.DrawText(layout, x - layout.Metrics.Width / 2, y);
         }
 
-        private void DrawItemStatsTooltip(IItem item, float x, float y)
+        private void DrawItemTooltip(IItem item, float x, float y)
         {
-            // Build tooltip content
             var lines = new List<TooltipLine>();
 
             // Item name
             string name = item.SnoItem.NameLocalized ?? item.SnoItem.NameEnglish ?? "Unknown";
             lines.Add(new TooltipLine { Text = name, Font = _titleFont });
 
-            // Ancient/Primal status
-            if (ShowAncientStatus)
+            // Ancient/Primal status - THIS IS ALWAYS ACCURATE
+            if (item.AncientRank == 2)
             {
-                if (item.AncientRank == 2)
-                {
-                    lines.Add(new TooltipLine { Text = "PRIMAL ANCIENT", Font = _primalFont });
-                }
-                else if (item.AncientRank == 1)
-                {
-                    lines.Add(new TooltipLine { Text = "ANCIENT", Font = _ancientFont });
-                }
+                lines.Add(new TooltipLine { Text = "!! PRIMAL ANCIENT !!", Font = _primalFont });
+            }
+            else if (item.AncientRank == 1)
+            {
+                lines.Add(new TooltipLine { Text = "* ANCIENT *", Font = _ancientFont });
             }
 
             // Set name
@@ -328,95 +299,83 @@
                 lines.Add(new TooltipLine { Text = "[Set Item]", Font = _setFont });
             }
 
-            // Unidentified indicator
+            // UNIDENTIFIED vs IDENTIFIED handling
             if (item.Unidentified)
             {
-                lines.Add(new TooltipLine { Text = "UNIDENTIFIED - Stats revealed:", Font = _hintFont });
-            }
-
-            // Overall perfection
-            if (ShowPerfection && item.Perfection > 0)
-            {
-                float perf = (float)(item.Perfection * 100);
-                IFont perfFont = _perfectionFont;
-                
-                if (perf >= GreatPerfectionThreshold)
-                    perfFont = _greatPerfectionFont;
-                else if (perf >= GoodPerfectionThreshold)
-                    perfFont = _goodPerfectionFont;
-
-                lines.Add(new TooltipLine { Text = string.Format("Overall: {0:F1}%", perf), Font = perfFont });
-            }
-
-            // Separator
-            lines.Add(new TooltipLine { Text = "-------------", Font = _hintFont });
-
-            // Item stats from Perfections
-            if (item.Perfections != null && item.Perfections.Length > 0)
-            {
-                int count = 0;
-                foreach (var perf in item.Perfections)
-                {
-                    if (count >= MaxStatsToShow) break;
-                    if (perf?.Attribute == null) continue;
-
-                    string statName = GetStatName(perf);
-                    string statValue = FormatStatValue(perf);
-                    string perfStr = "";
-
-                    // Calculate this stat's perfection
-                    if (ShowPerfection && perf.Max > perf.Min)
-                    {
-                        double statPerf = (perf.Cur - perf.Min) / (perf.Max - perf.Min) * 100;
-                        perfStr = string.Format(" ({0:F0}%)", statPerf);
-                    }
-
-                    IFont statValueFont = _statFont;
-                    if (!string.IsNullOrEmpty(perfStr))
-                    {
-                        double statPerf = (perf.Cur - perf.Min) / (perf.Max - perf.Min) * 100;
-                        if (statPerf >= GreatPerfectionThreshold)
-                            statValueFont = _greatPerfectionFont;
-                        else if (statPerf >= GoodPerfectionThreshold)
-                            statValueFont = _goodPerfectionFont;
-                    }
-
-                    lines.Add(new TooltipLine { Text = statName + ": " + statValue + perfStr, Font = statValueFont });
-                    count++;
-                }
-            }
-            // Fallback to StatList if no Perfections
-            else if (item.StatList != null)
-            {
-                int count = 0;
-                foreach (var stat in item.StatList)
-                {
-                    if (count >= MaxStatsToShow) break;
-                    if (stat?.Attribute == null) continue;
-
-                    string statName = stat.Attribute.Code ?? "Unknown";
-                    string statValue = stat.DoubleValue.ToString("F0");
-
-                    lines.Add(new TooltipLine { Text = statName + ": " + statValue, Font = _statFont });
-                    count++;
-                }
-            }
-
-            // Affixes (legendary powers)
-            if (item.Affixes != null && item.Affixes.Length > 0)
-            {
                 lines.Add(new TooltipLine { Text = "-------------", Font = _hintFont });
-                
-                foreach (var affix in item.Affixes)
+                lines.Add(new TooltipLine { Text = "UNIDENTIFIED", Font = _warningFont });
+                lines.Add(new TooltipLine { Text = "Ancient/Primal status is accurate!", Font = _hintFont });
+                lines.Add(new TooltipLine { Text = "Stats unknown until identified.", Font = _hintFont });
+            }
+            else
+            {
+                // IDENTIFIED - Show full stats
+                lines.Add(new TooltipLine { Text = "-------------", Font = _hintFont });
+
+                // Overall perfection
+                if (ShowPerfection && item.Perfection > 0)
                 {
-                    if (affix == null) continue;
-                    string affixName = affix.NameLocalized ?? affix.NameEnglish ?? "";
-                    if (!string.IsNullOrEmpty(affixName))
+                    float perf = (float)(item.Perfection * 100);
+                    IFont perfFont = _perfectionFont;
+                    
+                    if (perf >= GreatPerfectionThreshold)
+                        perfFont = _greatPerfectionFont;
+                    else if (perf >= GoodPerfectionThreshold)
+                        perfFont = _goodPerfectionFont;
+
+                    lines.Add(new TooltipLine { Text = string.Format("Overall Perfection: {0:F1}%", perf), Font = perfFont });
+                    lines.Add(new TooltipLine { Text = "-------------", Font = _hintFont });
+                }
+
+                // Item stats from Perfections
+                if (item.Perfections != null && item.Perfections.Length > 0)
+                {
+                    int count = 0;
+                    foreach (var perf in item.Perfections)
                     {
-                        // Truncate long names
-                        if (affixName.Length > 40)
-                            affixName = affixName.Substring(0, 37) + "...";
-                        lines.Add(new TooltipLine { Text = "+ " + affixName, Font = _titleFont });
+                        if (count >= MaxStatsToShow) break;
+                        if (perf?.Attribute == null) continue;
+
+                        string statName = GetStatName(perf);
+                        string statValue = FormatStatValue(perf);
+                        string perfStr = "";
+
+                        if (ShowPerfection && perf.Max > perf.Min)
+                        {
+                            double statPerf = (perf.Cur - perf.Min) / (perf.Max - perf.Min) * 100;
+                            perfStr = string.Format(" ({0:F0}%)", statPerf);
+                        }
+
+                        IFont statValueFont = _statFont;
+                        if (ShowPerfection && perf.Max > perf.Min)
+                        {
+                            double statPerf = (perf.Cur - perf.Min) / (perf.Max - perf.Min) * 100;
+                            if (statPerf >= GreatPerfectionThreshold)
+                                statValueFont = _greatPerfectionFont;
+                            else if (statPerf >= GoodPerfectionThreshold)
+                                statValueFont = _goodPerfectionFont;
+                        }
+
+                        lines.Add(new TooltipLine { Text = statName + ": " + statValue + perfStr, Font = statValueFont });
+                        count++;
+                    }
+                }
+
+                // Affixes (legendary powers)
+                if (item.Affixes != null && item.Affixes.Length > 0)
+                {
+                    lines.Add(new TooltipLine { Text = "-------------", Font = _hintFont });
+                    
+                    foreach (var affix in item.Affixes)
+                    {
+                        if (affix == null) continue;
+                        string affixName = affix.NameLocalized ?? affix.NameEnglish ?? "";
+                        if (!string.IsNullOrEmpty(affixName))
+                        {
+                            if (affixName.Length > 45)
+                                affixName = affixName.Substring(0, 42) + "...";
+                            lines.Add(new TooltipLine { Text = "+ " + affixName, Font = _titleFont });
+                        }
                     }
                 }
             }
@@ -424,7 +383,7 @@
             // Calculate tooltip size
             float maxWidth = 0;
             float totalHeight = 0;
-            float padding = 8;
+            float padding = 10;
 
             foreach (var line in lines)
             {
@@ -439,11 +398,13 @@
             float tooltipW = maxWidth + padding * 2;
             float tooltipH = totalHeight + padding * 2;
 
-            // Keep tooltip on screen
+            // Keep on screen
             if (x + tooltipW > Hud.Window.Size.Width - 10)
                 x = Hud.Window.Size.Width - tooltipW - 10;
             if (y + tooltipH > Hud.Window.Size.Height - 10)
                 y = Hud.Window.Size.Height - tooltipH - 10;
+            if (x < 10) x = 10;
+            if (y < 10) y = 10;
 
             // Draw background
             _panelBrush.DrawRectangle(x, y, tooltipW, tooltipH);
@@ -475,7 +436,6 @@
 
             string code = perf.Attribute.Code ?? "";
             
-            // Common stat translations
             switch (code)
             {
                 case "Strength_Item": return "Strength";
@@ -514,7 +474,6 @@
                 case "Power_Damage_Percent_Bonus": return "Skill Dmg %";
                 case "Area_Damage_Percent": return "Area Damage";
                 default: 
-                    // Try to make the code more readable
                     return code.Replace("_Item", "").Replace("_", " ");
             }
         }
@@ -524,7 +483,6 @@
             double value = perf.Cur;
             string code = perf.Attribute?.Code ?? "";
 
-            // Format percentages
             if (code.Contains("Percent") || code.Contains("Crit") || 
                 code.Contains("Reduction") || code.Contains("Find") ||
                 code.Contains("Bonus"))
@@ -532,7 +490,6 @@
                 return string.Format("{0:F1}%", value * 100);
             }
 
-            // Format whole numbers
             if (value >= 1000)
                 return string.Format("{0:N0}", value);
 
