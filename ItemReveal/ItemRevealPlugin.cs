@@ -23,7 +23,7 @@
     /// 
     /// No more wasting time with the Book of Cain!
     /// </summary>
-    public class ItemRevealPlugin : BasePlugin, IInGameTopPainter, IKeyEventHandler, IItemsOnFloorPainter
+    public class ItemRevealPlugin : BasePlugin, IInGameTopPainter, IKeyEventHandler, IInGameWorldPainter
     {
         #region Settings
 
@@ -147,13 +147,13 @@
             }
         }
 
-        public void PaintItems(IEnumerable<IItem> items, ClipState clipState)
+        public void PaintWorld(WorldLayer layer)
         {
             if (!_enabled) return;
             if (!ShowGroundStats) return;
-            if (clipState != ClipState.BeforeClip) return;
+            if (layer != WorldLayer.Ground) return;
 
-            foreach (var item in items)
+            foreach (var item in Hud.Game.Items.Where(i => i.Location == ItemLocation.Floor))
             {
                 if (!ShouldShowStats(item)) continue;
                 if (!item.Unidentified) continue;
@@ -270,12 +270,12 @@
 
             if (item.AncientRank == 2)
             {
-                text = "⚡ PRIMAL";
+                text = "PRIMAL";
                 font = _primalFont;
             }
             else if (item.AncientRank == 1)
             {
-                text = "★ ANCIENT";
+                text = "ANCIENT";
                 font = _ancientFont;
             }
             else if (item.SetSno != 0)
@@ -314,11 +314,11 @@
             {
                 if (item.AncientRank == 2)
                 {
-                    lines.Add(new TooltipLine { Text = "⚡ PRIMAL ANCIENT", Font = _primalFont });
+                    lines.Add(new TooltipLine { Text = "PRIMAL ANCIENT", Font = _primalFont });
                 }
                 else if (item.AncientRank == 1)
                 {
-                    lines.Add(new TooltipLine { Text = "★ ANCIENT", Font = _ancientFont });
+                    lines.Add(new TooltipLine { Text = "ANCIENT", Font = _ancientFont });
                 }
             }
 
@@ -349,7 +349,7 @@
             }
 
             // Separator
-            lines.Add(new TooltipLine { Text = "─────────────", Font = _hintFont });
+            lines.Add(new TooltipLine { Text = "-------------", Font = _hintFont });
 
             // Item stats from Perfections
             if (item.Perfections != null && item.Perfections.Length > 0)
@@ -405,7 +405,7 @@
             // Affixes (legendary powers)
             if (item.Affixes != null && item.Affixes.Length > 0)
             {
-                lines.Add(new TooltipLine { Text = "─────────────", Font = _hintFont });
+                lines.Add(new TooltipLine { Text = "-------------", Font = _hintFont });
                 
                 foreach (var affix in item.Affixes)
                 {
@@ -416,7 +416,7 @@
                         // Truncate long names
                         if (affixName.Length > 40)
                             affixName = affixName.Substring(0, 37) + "...";
-                        lines.Add(new TooltipLine { Text = "• " + affixName, Font = _titleFont });
+                        lines.Add(new TooltipLine { Text = "+ " + affixName, Font = _titleFont });
                     }
                 }
             }
@@ -429,10 +429,11 @@
             foreach (var line in lines)
             {
                 var layout = line.Font.GetTextLayout(line.Text);
-                line.Layout = layout;
-                if (layout.Metrics.Width > maxWidth)
-                    maxWidth = layout.Metrics.Width;
-                totalHeight += layout.Metrics.Height + 2;
+                line.Width = layout.Metrics.Width;
+                line.Height = layout.Metrics.Height;
+                if (line.Width > maxWidth)
+                    maxWidth = line.Width;
+                totalHeight += line.Height + 2;
             }
 
             float tooltipW = maxWidth + padding * 2;
@@ -462,8 +463,9 @@
             float lineY = y + padding;
             foreach (var line in lines)
             {
-                line.Font.DrawText(line.Layout, x + padding, lineY);
-                lineY += line.Layout.Metrics.Height + 2;
+                var layout = line.Font.GetTextLayout(line.Text);
+                line.Font.DrawText(layout, x + padding, lineY);
+                lineY += line.Height + 2;
             }
         }
 
@@ -486,8 +488,8 @@
                 case "Hitpoints_Regen_Per_Second": return "Life Regen";
                 case "Hitpoints_On_Hit": return "Life on Hit";
                 case "Hitpoints_On_Kill": return "Life on Kill";
-                case "Resource_Cost_Reduction_Percent_All": return "Resource Cost Reduction";
-                case "Cooldown_Reduction_Percent_All": return "Cooldown Reduction";
+                case "Resource_Cost_Reduction_Percent_All": return "RCR";
+                case "Cooldown_Reduction_Percent_All": return "CDR";
                 case "Attacks_Per_Second_Percent": return "Attack Speed %";
                 case "Attacks_Per_Second_Item": return "Attack Speed";
                 case "Crit_Percent_Bonus_Capped": return "Crit Chance";
@@ -495,21 +497,21 @@
                 case "Damage_Min_Physical": return "Min Damage";
                 case "Damage_Delta_Physical": return "Damage Range";
                 case "Damage_Weapon_Percent_All": return "Damage %";
-                case "Damage_Percent_Bonus_Vs_Elites": return "Elite Damage %";
+                case "Damage_Percent_Bonus_Vs_Elites": return "Elite Dmg %";
                 case "Resistance_All": return "All Resist";
-                case "Resistance_Physical": return "Physical Resist";
+                case "Resistance_Physical": return "Phys Resist";
                 case "Resistance_Fire": return "Fire Resist";
-                case "Resistance_Lightning": return "Lightning Resist";
+                case "Resistance_Lightning": return "Light Resist";
                 case "Resistance_Cold": return "Cold Resist";
                 case "Resistance_Poison": return "Poison Resist";
                 case "Resistance_Arcane": return "Arcane Resist";
                 case "Gold_Find": return "Gold Find";
                 case "Magic_Find": return "Magic Find";
                 case "Experience_Bonus_Percent": return "Experience %";
-                case "Movement_Scalar": return "Movement Speed";
+                case "Movement_Scalar": return "Move Speed";
                 case "Sockets": return "Sockets";
                 case "Thorns_Fixed_Physical": return "Thorns";
-                case "Power_Damage_Percent_Bonus": return "Skill Damage %";
+                case "Power_Damage_Percent_Bonus": return "Skill Dmg %";
                 case "Area_Damage_Percent": return "Area Damage";
                 default: 
                     // Try to make the code more readable
@@ -541,7 +543,8 @@
         {
             public string Text;
             public IFont Font;
-            public ITextLayout Layout;
+            public float Width;
+            public float Height;
         }
     }
 }
