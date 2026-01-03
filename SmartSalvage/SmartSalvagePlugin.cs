@@ -1084,14 +1084,14 @@
             // Scroll
             if (areaId == "scroll_up")
             {
-                _scrollOffset = Math.max(0, _scrollOffset - 1);
+                _scrollOffset = Math.Max(0, _scrollOffset - 1);
                 return;
             }
 
             if (areaId == "scroll_down")
             {
-                int maxOffset = Math.max(0, BlacklistMgr.Profiles.Count - _maxVisibleProfiles);
-                _scrollOffset = Math.min(maxOffset, _scrollOffset + 1);
+                int maxOffset = Math.Max(0, BlacklistMgr.Profiles.Count - _maxVisibleProfiles);
+                _scrollOffset = Math.Min(maxOffset, _scrollOffset + 1);
                 return;
             }
 
