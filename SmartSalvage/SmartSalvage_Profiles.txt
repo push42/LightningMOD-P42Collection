@@ -1,0 +1,57 @@
+# Smart Salvage Profiles
+# Do not edit manually
+# Generated: 2025-12-31 03:24:55
+
+[CustomItems]
+
+[Profile:48ab0920]
+Name=Diablo 3 Season 37 GoD Hungering Arrow DH
+Description=DemonHunter build with 206 items
+SourceUrl=https://maxroll.gg/d3/guides/god-ha-demon-hunter-guide
+HeroClass=DemonHunter
+Icon=🏹
+IsEnabled=False
+IsImported=True
+Items=About Us|Activities|Akkhan|Altar of Rites|Altar Unlocking Guide|Archive|Area Damage|Attack Speed \u0026amp; Breakpoints|Augments|Avarice Band|Barbarian|BitCraft|Black Myth Wukong|Blue Protocol: Star Resonance|Boots|Borderlands 4|Bounties|Bounty Farming|Brotato|Build Guides|Call of Duty|Challenge Rifts|Clair Obscur: Expedition 33|Class Overview|Conquests|Contact Us|Convention of Elements|Cookie Policy|Cooldown \u0026amp; Resource Cost Reduction|Counter-Strike 2|Crafting|Critical Hit Chance \u0026amp; Hit Damage|Crowd Control|Crusader|d3/Aegis-of-Valor|d3/Armor-of-Akkhan|d3/barbarian|d3/Bones-of-Rathma|d3/bounties|d3/Console|d3/crusader|d3/Delsere's-Magnum-Opus|d3/demon-hunter|d3/Embodiment-of-the-Marauder|d3/Firebird's-Finery|d3/Gears-of-Dreadlands|d3/Grace-of-Inarius|d3/group|d3/HC|d3/Helltooth-Harness|d3/Horde-of-the-Ninety-Savages|d3/Immortal-King's-Call|d3/Inna's-Mantra|d3/keys|d3/LoD / LoN|d3/Masquerade-of-the-Burning-Carnival|d3/Might-of-the-Earth|d3/monk|d3/Monkey-King's-Garb|d3/Mundunugu's-Regalia|d3/Natalya's-Vengeance|d3/necromancer|d3/Patterns-of-Justice|d3/Pestilence-Master's-Shroud|d3/push|d3/Raiment-of-a-Thousand-Storms|d3/Raiment-of-the-Jade-Harvester|d3/Roland's-Legacy|d3/Seeker-of-the-Light|d3/solo|d3/speed|d3/Spirit-of-Arachyr|d3/SSF|d3/support|d3/Tal-Rasha's-Elements|d3/The-Legacy-of-Raekor|d3/The-Shadow's-Mantle|d3/The-Typhon's-Veil|d3/Thorns-of-the-Invoker|d3/Trag'Oul's-Avatar|d3/Uliana's-Stratagem|d3/Unhallowed-Essence|d3/Vyr's-Amazing-Arcana|d3/witch-doctor|d3/wizard|d3/Wrath-of-the-Wastes|d3/Zunimassa's-Haunt|D3Planner|Damage Multipliers \u0026amp; Thorns|Damage Reduction|Demon Hunter|Diablo II: R|Diablo III|Diablo IV|Dystopian|Echoing Nightmare|Echoing Nightmares|Elden Ring|Elden Ring Nightreign|Elites|Enemies|Eternal Conflict|Ethereals|Experience|Firebird|Focus|Followers|For breaking walls to pull enemies and increase DPS|Forbidden Archives|Fortnite|Games|Gears of Dreadlands|Giveaways|Gloves|Gold \u0026amp; Magic Find|Goldwrap|Greater Rift Push|Greater Rifts|Guides|Hades 2|Haedrig's Gift GR20 Guide|Hardcore|Hell Clock|Ice Climbers|In-geom|Inna|Items|Kadala|Kadala Gamble Calculator|Kanai's Cube|Key Farming|Lag Management|Last Epoch|Leaderboards|Legendary Gems|Legendary Items|Legendary Potions|Lost Ark|Main Menu|Main-Hand|Mechanical Pauldrons|Mechanics|Monster Hunter Wilds|Mundunugu|Necromancer|Nemesis Bracers|Nephalem Rifts|No Rest for the Wicked|Non-seasonal|Normal|Off-Hand|Orek's Dream|Palworld|Pants|Paragon Calculator|Path of Exile|Path of Exile 2|Pets, Wings \u0026amp; Transmogs|PlayerUnknown's Battlegrounds|Potion|Privacy Policy|Rainbow Goblin Farming|Ramaladni's Gift|Refund Policy|Resources|Restraint|Rift Guardian Killer|Rift Guardians|Ring of Royal Grandeur|Salvage List|Sanctified Items|Season|Season 37|Season History|Season Journey|Seasonal/Non-Seasonal Split|Set Dungeon|Set Dungeons|Shades of the Nephalem|Solo Experience|Solo Pushing|Solo Self-Found|Soul Shards|Squirt's Necklace|Stone of Jordan|Store|Support|The Darkening of Tristram|The Flavor of Time|Themes|Throne And Liberty|Tier Lists|Tierlists|Tools|Trash Killer|Uncategorised|Unity|Valorant|Visions of Enmity|Wastes|Witch Doctor|Wizard|Wizard of Legend 2|World of Warcraft|Wuchang Fallen Feathers|Wudijo
+
+[Profile:78f9e2be]
+Name=Diablo 3 Season 37 LoD Skeletal Mage "Rat" Necro
+Description=Necromancer build with 26 items
+SourceUrl=https://maxroll.gg/d3/guides/lod-skeletal-mage-rat-necromancer
+HeroClass=Necromancer
+Icon=💀
+IsEnabled=False
+IsImported=True
+Items=Avarice Band|Bane of the Trapped|Bone Ringer|Boon of the Hoarder|Convention of Elements|Enforcer|Esoteric Alteration|Focus|Gloves of Worship|Goldwrap|Haunted Visions|Hexing Pants of Mr. Yan|Ice Climbers|In-geom|Legacy of Dreams|Lost Time|Mutilation Guard|Nemesis Bracers|Ring of Royal Grandeur|Scythe of the Cycle|Stone Gauntlets|Tasker and Theo|The Flavor of Time|The Witching Hour|Unity|Warzechian Armguards
+
+[Profile:e9b2d48b]
+Name=Diablo 3 Season 37 UE Multishot Demon Hunter
+Description=DemonHunter build with 33 items
+SourceUrl=https://maxroll.gg/d3/guides/ue-multishot-demon-hunter-guide
+HeroClass=DemonHunter
+Icon=🏹
+IsEnabled=True
+IsImported=True
+Items=Accursed Visage|Aquila Cuirass|Avarice Band|Bane of the Powerful|Bane of the Stricken|Bane of the Trapped|Boon of the Hoarder|Cage of the Hellborn|Convention of Elements|Dawn|Echoing Fury|Esoteric Alteration|Focus|Fortress Ballista|Gloves of Worship|Goldwrap|Hexing Pants of Mr. Yan|Ice Climbers|In-geom|Mutilation Guard|Nemesis Bracers|Restraint|Ring of Royal Grandeur|Stone Gauntlets|Stone of Jordan|Stricken|The Compass Rose|The Flavor of Time|Unity|Unsanctified Shoulders|Warzechian Armguards|Wraps of Clarity|Wreath of Lightning
+
+[Profile:260ddf8c]
+Name=Diablo 3 Season 37 Natalya Spike Trap
+Description=DemonHunter build with 26 items
+SourceUrl=https://maxroll.gg/d3/guides/natalya-spike-trap-demon-hunter-guide
+HeroClass=DemonHunter
+Icon=🏹
+IsEnabled=True
+IsImported=True
+Items=Avarice Band|Bane of the Powerful|Bane of the Stricken|Bane of the Trapped|Boon of the Hoarder|Chanon Bolter|Convention of Elements|Dawn|Enforcer|Esoteric Alteration|Focus|Gloves of Worship|Gogok of Swiftness|Goldwrap|Ice Climbers|In-geom|Mutilation Guard|Nemesis Bracers|Pain Enhancer|Ring of Royal Grandeur|Stricken|The Compass Rose|The Flavor of Time|Unity|Warzechian Armguards|Wreath of Lightning
+
+[BuiltInStates]
+Universal=True
+NecroLoD=True
+DHGoD=True
+WDMundu=True
+BarbWW=False
+CrusAkkhan=False
+MonkInna=False
+WizFirebird=False
+Crafted=True
+Gems=True
