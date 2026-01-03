@@ -10,14 +10,14 @@
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Smart Salvage Plugin v2.0 - Beautiful & Enhanced
+    /// Smart Salvage Plugin v3.0 - Premium Edition
     /// 
     /// Features:
-    /// - Modern, responsive UI with animations
-    /// - Build profile management
-    /// - Import from Maxroll AND Icy Veins
-    /// - Visual item highlights in inventory
-    /// - Quick actions and keyboard shortcuts
+    /// - Beautiful, polished UI with smooth animations
+    /// - Build profile management with Maxroll/Icy-Veins import
+    /// - STAT-BASED RULES: Keep items only if they meet stat requirements
+    /// - GLOBAL RULES: Always keep Primals, high perfection items, etc.
+    /// - Visual item highlights with quality indicators
     /// 
     /// Hotkeys:
     /// - U = Start/Stop auto-salvage
@@ -33,11 +33,10 @@
         public IKeyEvent QuickToggleKey { get; set; }
 
         public bool AutoRepair { get; set; }
-        public int SalvageAncient { get; set; }  // 0=smart, 1=never, 2=always
-        public int SalvagePrimal { get; set; }   // 0=smart, 1=never, 2=always
 
         public BlacklistManager BlacklistMgr { get; private set; }
         public MaxrollCrawler Crawler { get; private set; }
+        public RulesManager RulesMgr { get; private set; }
 
         #endregion
 
@@ -53,52 +52,69 @@
 
         #endregion
 
-        #region Private Fields - Fonts & Brushes
+        #region Private Fields - Visual Design System
 
-        // Modern color scheme
-        private IFont _titleFont;
-        private IFont _headerFont;
-        private IFont _bodyFont;
-        private IFont _smallFont;
-        private IFont _accentFont;
-        private IFont _successFont;
-        private IFont _warningFont;
-        private IFont _monoFont;
+        // Typography
+        private IFont _fontTitle;
+        private IFont _fontHeader;
+        private IFont _fontBody;
+        private IFont _fontSmall;
+        private IFont _fontMicro;
+        private IFont _fontMono;
+        private IFont _fontIcon;
 
-        // Panel backgrounds
-        private IBrush _panelBrush;
-        private IBrush _panelDarkBrush;
-        private IBrush _headerBrush;
-        private IBrush _borderBrush;
-        private IBrush _accentBorderBrush;
+        // Semantic Colors
+        private IFont _fontSuccess;
+        private IFont _fontWarning;
+        private IFont _fontError;
+        private IFont _fontAccent;
+        private IFont _fontMuted;
 
-        // Interactive elements
-        private IBrush _buttonBrush;
-        private IBrush _buttonHoverBrush;
-        private IBrush _buttonActiveBrush;
-        private IBrush _inputBrush;
-        private IBrush _inputFocusBrush;
+        // Surface Brushes
+        private IBrush _surfaceBase;
+        private IBrush _surfaceElevated;
+        private IBrush _surfaceOverlay;
+        private IBrush _surfaceCard;
 
-        // Status indicators
-        private IBrush _successBrush;
-        private IBrush _warningBrush;
-        private IBrush _errorBrush;
-        private IBrush _infoBrush;
+        // Border Brushes
+        private IBrush _borderDefault;
+        private IBrush _borderAccent;
+        private IBrush _borderSuccess;
+        private IBrush _borderWarning;
+        private IBrush _borderError;
 
-        // Toggles
-        private IBrush _toggleOnBrush;
-        private IBrush _toggleOffBrush;
-        private IBrush _toggleTrackBrush;
+        // Interactive Brushes
+        private IBrush _btnDefault;
+        private IBrush _btnHover;
+        private IBrush _btnActive;
+        private IBrush _btnDisabled;
 
-        // Item highlights
-        private IBrush _protectedHighlight;
-        private IBrush _salvageHighlight;
-        private IBrush _ancientHighlight;
-        private IBrush _primalHighlight;
+        // Toggle Brushes
+        private IBrush _toggleOn;
+        private IBrush _toggleOff;
+        private IBrush _toggleTrack;
+        private IBrush _toggleKnob;
 
-        // Scrollbar
-        private IBrush _scrollTrackBrush;
-        private IBrush _scrollThumbBrush;
+        // Status Brushes
+        private IBrush _statusSuccess;
+        private IBrush _statusWarning;
+        private IBrush _statusError;
+        private IBrush _statusInfo;
+
+        // Highlight Brushes
+        private IBrush _highlightProtected;
+        private IBrush _highlightSalvage;
+        private IBrush _highlightAncient;
+        private IBrush _highlightPrimal;
+        private IBrush _highlightStatRule;
+
+        // Progress Brushes
+        private IBrush _progressTrack;
+        private IBrush _progressFill;
+
+        // Scroll Brushes
+        private IBrush _scrollTrack;
+        private IBrush _scrollThumb;
 
         #endregion
 
@@ -110,6 +126,7 @@
         private IWatch _statusTimer;
         private IWatch _animTimer;
         private IWatch _clickTimer;
+        private IWatch _pulseTimer;
 
         private int _lastCursorX;
         private int _lastCursorY;
@@ -120,10 +137,8 @@
         // UI State
         private bool _showManager;
         private int _scrollOffset;
-        private int _maxVisibleProfiles = 10;
-        private string _hoveredProfileId;
-        private string _hoveredButton;
-        private string _activeTab = "profiles";  // profiles, import, settings
+        private int _maxVisibleItems = 8;
+        private string _activeTab = "profiles";  // profiles, rules, global, import
 
         // Import state
         private string _importUrl;
@@ -136,10 +151,15 @@
         private Dictionary<string, RectangleF> _clickAreas;
 
         // Animation
-        private float _panelAlpha = 0f;
+        private float _panelSlide = 0f;
         private float _progressValue = 0f;
+        private float _pulsePhase = 0f;
         private int _salvageTotal = 0;
         private int _salvageDone = 0;
+
+        // Tooltip
+        private string _tooltipText;
+        private RectangleF _tooltipAnchor;
 
         #endregion
 
@@ -160,10 +180,7 @@
             ManagerKey = Hud.Input.CreateKeyEvent(true, Key.U, false, false, true);
             QuickToggleKey = Hud.Input.CreateKeyEvent(true, Key.U, true, false, false);
 
-            // Settings
             AutoRepair = true;
-            SalvageAncient = 1;
-            SalvagePrimal = 1;
 
             // Initialize managers
             BlacklistMgr = new BlacklistManager();
@@ -173,20 +190,20 @@
             BlacklistMgr.LoadFromFile();
 
             Crawler = new MaxrollCrawler();
+            RulesMgr = new RulesManager();
 
             _salvageAttempted = new HashSet<string>();
             _clickAreas = new Dictionary<string, RectangleF>();
 
-            // UI Elements
             InitializeUiElements();
-            InitializeFonts();
-            InitializeBrushes();
+            InitializeDesignSystem();
 
             // Timers
             _timer = Hud.Time.CreateAndStartWatch();
             _statusTimer = Hud.Time.CreateWatch();
             _animTimer = Hud.Time.CreateAndStartWatch();
             _clickTimer = Hud.Time.CreateAndStartWatch();
+            _pulseTimer = Hud.Time.CreateAndStartWatch();
 
             _statusMessage = "";
             _importUrl = "";
@@ -204,55 +221,69 @@
             _okButton = Hud.Render.RegisterUiElement("Root.TopLayer.confirmation.subdlg.stack.wrap.button_ok", _salvageDialog, null);
         }
 
-        private void InitializeFonts()
+        private void InitializeDesignSystem()
         {
-            // Modern font hierarchy
-            _titleFont = Hud.Render.CreateFont("segoe ui", 11, 255, 255, 215, 100, true, false, 220, 0, 0, 0, true);
-            _headerFont = Hud.Render.CreateFont("segoe ui", 9, 255, 240, 240, 245, true, false, 200, 0, 0, 0, true);
-            _bodyFont = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 210, 210, 215, false, false, 180, 0, 0, 0, true);
-            _smallFont = Hud.Render.CreateFont("segoe ui", 6.5f, 220, 160, 160, 170, false, false, 150, 0, 0, 0, true);
-            _accentFont = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 100, 200, 255, true, false, 180, 0, 0, 0, true);
-            _successFont = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 100, 220, 120, true, false, 180, 0, 0, 0, true);
-            _warningFont = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 255, 180, 80, true, false, 180, 0, 0, 0, true);
-            _monoFont = Hud.Render.CreateFont("consolas", 7, 255, 180, 180, 190, false, false, 160, 0, 0, 0, true);
-        }
+            // === TYPOGRAPHY ===
+            _fontTitle = Hud.Render.CreateFont("segoe ui", 12, 255, 255, 220, 120, true, false, 220, 0, 0, 0, true);
+            _fontHeader = Hud.Render.CreateFont("segoe ui semibold", 9, 255, 245, 245, 250, true, false, 200, 0, 0, 0, true);
+            _fontBody = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 220, 220, 230, false, false, 180, 0, 0, 0, true);
+            _fontSmall = Hud.Render.CreateFont("segoe ui", 6.5f, 230, 170, 170, 185, false, false, 150, 0, 0, 0, true);
+            _fontMicro = Hud.Render.CreateFont("segoe ui", 6f, 200, 140, 140, 155, false, false, 120, 0, 0, 0, true);
+            _fontMono = Hud.Render.CreateFont("consolas", 7, 255, 190, 200, 210, false, false, 160, 0, 0, 0, true);
+            _fontIcon = Hud.Render.CreateFont("segoe ui symbol", 9, 255, 255, 255, 255, false, false, 200, 0, 0, 0, true);
 
-        private void InitializeBrushes()
-        {
-            // Modern dark theme
-            _panelBrush = Hud.Render.CreateBrush(245, 22, 22, 30, 0);
-            _panelDarkBrush = Hud.Render.CreateBrush(250, 15, 15, 20, 0);
-            _headerBrush = Hud.Render.CreateBrush(240, 30, 30, 40, 0);
-            _borderBrush = Hud.Render.CreateBrush(200, 50, 50, 65, 1.5f);
-            _accentBorderBrush = Hud.Render.CreateBrush(255, 100, 180, 255, 2f);
+            // Semantic fonts
+            _fontSuccess = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 120, 230, 140, true, false, 180, 0, 0, 0, true);
+            _fontWarning = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 255, 200, 100, true, false, 180, 0, 0, 0, true);
+            _fontError = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 255, 120, 120, true, false, 180, 0, 0, 0, true);
+            _fontAccent = Hud.Render.CreateFont("segoe ui", 7.5f, 255, 120, 180, 255, true, false, 180, 0, 0, 0, true);
+            _fontMuted = Hud.Render.CreateFont("segoe ui", 7f, 180, 130, 130, 145, false, false, 140, 0, 0, 0, true);
 
-            // Buttons
-            _buttonBrush = Hud.Render.CreateBrush(220, 45, 55, 75, 0);
-            _buttonHoverBrush = Hud.Render.CreateBrush(240, 60, 80, 110, 0);
-            _buttonActiveBrush = Hud.Render.CreateBrush(255, 80, 120, 180, 0);
-            _inputBrush = Hud.Render.CreateBrush(230, 18, 18, 25, 0);
-            _inputFocusBrush = Hud.Render.CreateBrush(250, 25, 30, 40, 0);
+            // === SURFACES ===
+            _surfaceBase = Hud.Render.CreateBrush(250, 18, 18, 24, 0);
+            _surfaceElevated = Hud.Render.CreateBrush(248, 24, 24, 32, 0);
+            _surfaceOverlay = Hud.Render.CreateBrush(245, 30, 30, 40, 0);
+            _surfaceCard = Hud.Render.CreateBrush(240, 35, 38, 48, 0);
 
-            // Status colors
-            _successBrush = Hud.Render.CreateBrush(255, 50, 180, 80, 0);
-            _warningBrush = Hud.Render.CreateBrush(255, 220, 160, 50, 0);
-            _errorBrush = Hud.Render.CreateBrush(255, 220, 70, 70, 0);
-            _infoBrush = Hud.Render.CreateBrush(255, 80, 160, 220, 0);
+            // === BORDERS ===
+            _borderDefault = Hud.Render.CreateBrush(180, 55, 58, 75, 1f);
+            _borderAccent = Hud.Render.CreateBrush(255, 100, 160, 255, 1.5f);
+            _borderSuccess = Hud.Render.CreateBrush(255, 80, 200, 120, 1.5f);
+            _borderWarning = Hud.Render.CreateBrush(255, 255, 180, 80, 1.5f);
+            _borderError = Hud.Render.CreateBrush(255, 255, 100, 100, 1.5f);
 
-            // Toggles
-            _toggleOnBrush = Hud.Render.CreateBrush(255, 60, 180, 90, 0);
-            _toggleOffBrush = Hud.Render.CreateBrush(255, 100, 50, 50, 0);
-            _toggleTrackBrush = Hud.Render.CreateBrush(200, 40, 40, 50, 0);
+            // === BUTTONS ===
+            _btnDefault = Hud.Render.CreateBrush(220, 45, 50, 65, 0);
+            _btnHover = Hud.Render.CreateBrush(240, 60, 70, 95, 0);
+            _btnActive = Hud.Render.CreateBrush(255, 80, 100, 140, 0);
+            _btnDisabled = Hud.Render.CreateBrush(150, 35, 38, 48, 0);
 
-            // Item highlights
-            _protectedHighlight = Hud.Render.CreateBrush(180, 100, 220, 100, 2.5f);
-            _salvageHighlight = Hud.Render.CreateBrush(180, 220, 80, 80, 2.5f);
-            _ancientHighlight = Hud.Render.CreateBrush(180, 255, 180, 80, 2.5f);
-            _primalHighlight = Hud.Render.CreateBrush(200, 255, 80, 80, 3f);
+            // === TOGGLES ===
+            _toggleOn = Hud.Render.CreateBrush(255, 70, 190, 110, 0);
+            _toggleOff = Hud.Render.CreateBrush(255, 110, 60, 60, 0);
+            _toggleTrack = Hud.Render.CreateBrush(200, 45, 48, 60, 0);
+            _toggleKnob = Hud.Render.CreateBrush(255, 240, 240, 245, 0);
 
-            // Scrollbar
-            _scrollTrackBrush = Hud.Render.CreateBrush(150, 35, 35, 45, 0);
-            _scrollThumbBrush = Hud.Render.CreateBrush(200, 70, 80, 100, 0);
+            // === STATUS ===
+            _statusSuccess = Hud.Render.CreateBrush(255, 60, 190, 100, 0);
+            _statusWarning = Hud.Render.CreateBrush(255, 230, 170, 60, 0);
+            _statusError = Hud.Render.CreateBrush(255, 230, 90, 90, 0);
+            _statusInfo = Hud.Render.CreateBrush(255, 90, 160, 230, 0);
+
+            // === HIGHLIGHTS ===
+            _highlightProtected = Hud.Render.CreateBrush(160, 80, 220, 120, 2.5f);
+            _highlightSalvage = Hud.Render.CreateBrush(160, 230, 90, 90, 2.5f);
+            _highlightAncient = Hud.Render.CreateBrush(160, 255, 190, 90, 2.5f);
+            _highlightPrimal = Hud.Render.CreateBrush(180, 255, 90, 90, 3f);
+            _highlightStatRule = Hud.Render.CreateBrush(160, 180, 120, 255, 2.5f);
+
+            // === PROGRESS ===
+            _progressTrack = Hud.Render.CreateBrush(200, 40, 42, 55, 0);
+            _progressFill = Hud.Render.CreateBrush(255, 80, 200, 120, 0);
+
+            // === SCROLL ===
+            _scrollTrack = Hud.Render.CreateBrush(150, 40, 42, 55, 0);
+            _scrollThumb = Hud.Render.CreateBrush(200, 80, 85, 105, 0);
         }
 
         #endregion
@@ -263,32 +294,26 @@
         {
             if (!Hud.Game.IsInGame) return;
 
-            // Ctrl+U = Quick toggle all profiles
             if (QuickToggleKey.Matches(keyEvent) && keyEvent.IsPressed)
             {
                 bool anyEnabled = BlacklistMgr.Profiles.Values.Any(p => p.IsEnabled);
                 foreach (var profile in BlacklistMgr.Profiles.Values)
-                {
                     profile.IsEnabled = !anyEnabled;
-                }
                 BlacklistMgr.RebuildActiveBlacklist();
-                SetStatus(anyEnabled ? "All profiles disabled" : "All profiles enabled", StatusType.Info);
+                SetStatus(anyEnabled ? "All profiles OFF" : "All profiles ON", anyEnabled ? StatusType.Warning : StatusType.Success);
                 return;
             }
 
-            // Shift+U = Toggle profile manager
             if (ManagerKey.Matches(keyEvent) && keyEvent.IsPressed)
             {
                 if (IsSalvageWindowOpen() || IsRepairWindowOpen())
                 {
                     _showManager = !_showManager;
                     _scrollOffset = 0;
-                    _panelAlpha = 0f;
                 }
                 return;
             }
 
-            // U = Start/stop salvage
             if (SalvageKey.Matches(keyEvent) && keyEvent.IsPressed)
             {
                 if (_isRunning)
@@ -314,25 +339,17 @@
 
         public void AfterCollect()
         {
-            if (!Hud.Game.IsInGame) return;
-            if (!_isRunning) return;
-            if (!ValidateState())
-            {
-                _isRunning = false;
-                _isSalvaging = false;
-                return;
-            }
+            if (!Hud.Game.IsInGame || !_isRunning) return;
+            if (!ValidateState()) { _isRunning = false; _isSalvaging = false; return; }
             if (_isSalvaging) return;
-
             ProcessSalvage();
         }
 
         private bool ValidateState()
         {
-            if (!Hud.Window.IsForeground) return false;
-            if (!IsSalvageWindowOpen() && !IsRepairWindowOpen()) return false;
-            if (!Hud.Inventory.InventoryMainUiElement.Visible) return false;
-            return true;
+            return Hud.Window.IsForeground && 
+                   (IsSalvageWindowOpen() || IsRepairWindowOpen()) && 
+                   Hud.Inventory.InventoryMainUiElement.Visible;
         }
 
         private void ProcessSalvage()
@@ -343,7 +360,6 @@
 
             try
             {
-                // Switch to salvage tab if on repair
                 if (IsRepairWindowOpen() && !IsSalvageWindowOpen())
                 {
                     Hud.Interaction.ClickUiElement(MouseButtons.Left, _salvageTab);
@@ -353,11 +369,7 @@
                     return;
                 }
 
-                if (!IsSalvageWindowOpen())
-                {
-                    _isSalvaging = false;
-                    return;
-                }
+                if (!IsSalvageWindowOpen()) { _isSalvaging = false; return; }
 
                 var items = GetItemsToSalvage();
                 _salvageTotal = items.Count;
@@ -367,7 +379,7 @@
                     SetAnvil(false);
                     _isRunning = false;
                     _isSalvaging = false;
-                    SetStatus("Complete! All done.", StatusType.Success);
+                    SetStatus("✓ Complete!", StatusType.Success);
                     Hud.Interaction.MouseMove(_lastCursorX, _lastCursorY, 1, 1);
                     return;
                 }
@@ -377,11 +389,8 @@
 
                 foreach (var item in items)
                 {
-                    if (!_isRunning) break;
-                    if (!IsSalvageWindowOpen()) break;
-
-                    if (_salvageAttempted.Contains(item.ItemUniqueId))
-                        continue;
+                    if (!_isRunning || !IsSalvageWindowOpen()) break;
+                    if (_salvageAttempted.Contains(item.ItemUniqueId)) continue;
 
                     _salvageAttempted.Add(item.ItemUniqueId);
                     _salvageDone++;
@@ -398,23 +407,12 @@
                     if (item.IsLegendary)
                     {
                         Hud.Wait(50);
-                        if (_okButton.Visible)
-                        {
-                            Hud.Interaction.PressEnter();
-                            Hud.Wait(30);
-                        }
+                        if (_okButton.Visible) { Hud.Interaction.PressEnter(); Hud.Wait(30); }
                     }
-
                     Hud.Wait(20);
                 }
 
                 SetAnvil(false);
-
-                IUiElement chatLine = Hud.Render.GetUiElement("Root.NormalLayer.chatentry_dialog_backgroundScreen.chatentry_content.chat_editline");
-                if (chatLine != null && chatLine.Visible)
-                {
-                    Hud.Interaction.PressEnter();
-                }
             }
             finally
             {
@@ -425,68 +423,150 @@
 
         private void SetAnvil(bool enabled)
         {
-            IUiElement anvilButton = _salvageButton1?.Visible == true ? _salvageButton1 :
-                                     _salvageButton2?.Visible == true ? _salvageButton2 : null;
-            if (anvilButton == null) return;
-
-            bool isEnabled = anvilButton.AnimState == 19 || anvilButton.AnimState == 20;
-            if (enabled == isEnabled) return;
-
-            Hud.Interaction.ClickUiElement(MouseButtons.Left, anvilButton);
-            Hud.Wait(100);
+            IUiElement btn = _salvageButton1?.Visible == true ? _salvageButton1 : 
+                             _salvageButton2?.Visible == true ? _salvageButton2 : null;
+            if (btn == null) return;
+            bool isEnabled = btn.AnimState == 19 || btn.AnimState == 20;
+            if (enabled != isEnabled) { Hud.Interaction.ClickUiElement(MouseButtons.Left, btn); Hud.Wait(100); }
         }
 
         private List<IItem> GetItemsToSalvage()
         {
             var result = new List<IItem>();
             foreach (var item in Hud.Inventory.ItemsInInventory)
-            {
-                if (CanSalvage(item))
-                    result.Add(item);
-            }
-            result.Sort((a, b) =>
-            {
-                int cmp = a.InventoryX.CompareTo(b.InventoryX);
-                return cmp != 0 ? cmp : a.InventoryY.CompareTo(b.InventoryY);
-            });
+                if (CanSalvage(item)) result.Add(item);
+            result.Sort((a, b) => a.InventoryX != b.InventoryX ? a.InventoryX.CompareTo(b.InventoryX) : a.InventoryY.CompareTo(b.InventoryY));
             return result;
         }
 
         private bool CanSalvage(IItem item)
         {
-            if (item == null || item.SnoItem == null) return false;
+            if (item?.SnoItem == null) return false;
             if (item.SnoItem.Kind != ItemKind.loot && item.SnoItem.Kind != ItemKind.potion) return false;
-            if (item.VendorBought || item.IsInventoryLocked) return false;
-            if (item.ItemsInSocket != null && item.ItemsInSocket.Length > 0) return false;
-            if (item.EnchantedAffixCounter > 0) return false;
-            if (item.Quantity > 1 || item.Location != ItemLocation.Inventory) return false;
-            if (IsInArmorySet(item)) return false;
 
-            string itemName = item.SnoItem.NameLocalized ?? "";
+            // === GLOBAL PROTECTION RULES ===
+            var gr = RulesMgr.GlobalRules;
+            
+            if (gr.ProtectLockedSlots && item.IsInventoryLocked) return false;
+            if (gr.ProtectSocketedItems && item.ItemsInSocket?.Length > 0) return false;
+            if (gr.ProtectEnchantedItems && item.EnchantedAffixCounter > 0) return false;
+            if (gr.ProtectArmoryItems && IsInArmorySet(item)) return false;
+            if (item.VendorBought || item.Quantity > 1 || item.Location != ItemLocation.Inventory) return false;
+
+            // === GLOBAL ALWAYS KEEP RULES ===
+            if (gr.AlwaysKeepPrimals && item.AncientRank == 2) return false;
+            if (gr.AlwaysKeepAncients && item.AncientRank == 1) return false;
+            if (gr.AlwaysKeepSetItems && item.SetSno != 0) return false;
+            if (gr.AlwaysKeepHighPerfection && item.Perfection * 100 >= gr.HighPerfectionThreshold) return false;
+
+            // === STAT-BASED RULES ===
+            string itemName = item.SnoItem.NameEnglish ?? item.SnoItem.NameLocalized ?? "";
+            var statRule = RulesMgr.GetRule(itemName);
+            if (statRule != null)
+            {
+                // Item has a stat rule - check if it meets requirements
+                bool meetsRequirements = EvaluateStatRule(item, statRule);
+                if (meetsRequirements) return false;  // Keep it!
+                // Doesn't meet requirements - continue to salvage
+            }
+
+            // === BLACKLIST CHECK ===
+            string localName = item.SnoItem.NameLocalized ?? "";
             string fullName = item.FullNameLocalized ?? "";
-            string englishName = item.SnoItem.NameEnglish ?? "";
-            if (BlacklistMgr.IsBlacklisted(itemName, fullName, englishName)) return false;
+            if (BlacklistMgr.IsBlacklisted(localName, fullName, itemName)) return false;
 
-            if (item.AncientRank == 2 && SalvagePrimal != 2) return false;
-            if (item.AncientRank == 1 && SalvageAncient != 2) return false;
+            // === GLOBAL ALWAYS SALVAGE RULES ===
+            // Note: These only apply if item wasn't protected above
 
+            // === ITEM TYPE FILTERS ===
             var mainGroup = item.SnoItem.MainGroupCode ?? "";
             string[] skipGroups = { "riftkeystone", "horadriccache", "plans", "-", "pony", "gems_unique" };
-            if (skipGroups.Any(g => mainGroup.Contains(g))) return false;
-            if (mainGroup.Contains("cosmetic")) return false;
+            if (skipGroups.Any(g => mainGroup.Contains(g)) || mainGroup.Contains("cosmetic")) return false;
 
             string[] skipNames = { "Staff of Herding", "Hellforge Ember", "Puzzle Ring", "Bovine Bardiche", "Ramaladni's Gift" };
-            if (skipNames.Contains(item.SnoItem.NameEnglish)) return false;
-
+            if (skipNames.Contains(itemName)) return false;
             if (item.SnoItem.Code?.StartsWith("P72_Soulshard") == true) return false;
 
             return true;
         }
 
+        private bool EvaluateStatRule(IItem item, StatRule rule)
+        {
+            if (rule.Conditions == null || rule.Conditions.Count == 0) return true;
+
+            var results = new List<bool>();
+            foreach (var cond in rule.Conditions)
+            {
+                double statValue = GetStatValue(item, cond.Stat);
+                bool matches = cond.Operator switch
+                {
+                    CompareOp.GreaterThan => statValue > cond.Value,
+                    CompareOp.GreaterOrEqual => statValue >= cond.Value,
+                    CompareOp.LessThan => statValue < cond.Value,
+                    CompareOp.LessOrEqual => statValue <= cond.Value,
+                    CompareOp.Equal => Math.Abs(statValue - cond.Value) < 0.001,
+                    _ => false
+                };
+                results.Add(matches);
+            }
+
+            return rule.Logic == RuleLogic.And ? results.All(r => r) : results.Any(r => r);
+        }
+
+        private double GetStatValue(IItem item, StatType stat)
+        {
+            if (item.Perfections == null) return 0;
+
+            foreach (var perf in item.Perfections)
+            {
+                if (perf?.Attribute == null) continue;
+                string code = perf.Attribute.Code ?? "";
+
+                bool match = stat switch
+                {
+                    StatType.CooldownReduction => code.Contains("Cooldown_Reduction"),
+                    StatType.ResourceCostReduction => code.Contains("Resource_Cost_Reduction"),
+                    StatType.CritChance => code.Contains("Crit_Percent"),
+                    StatType.CritDamage => code.Contains("Crit_Damage"),
+                    StatType.AttackSpeed => code.Contains("Attacks_Per_Second"),
+                    StatType.AreaDamage => code.Contains("Area_Damage"),
+                    StatType.Strength => code == "Strength_Item",
+                    StatType.Dexterity => code == "Dexterity_Item",
+                    StatType.Intelligence => code == "Intelligence_Item",
+                    StatType.Vitality => code == "Vitality_Item",
+                    StatType.AllResist => code == "Resistance_All",
+                    StatType.Armor => code.Contains("Armor"),
+                    StatType.LifePercent => code.Contains("Hitpoints_Max_Percent"),
+                    StatType.LifePerHit => code.Contains("Hitpoints_On_Hit"),
+                    StatType.SocketCount => code == "Sockets",
+                    _ => false
+                };
+
+                if (match)
+                {
+                    // Convert to percentage if needed
+                    if (stat == StatType.CooldownReduction || stat == StatType.ResourceCostReduction ||
+                        stat == StatType.CritChance || stat == StatType.CritDamage ||
+                        stat == StatType.AttackSpeed || stat == StatType.AreaDamage ||
+                        stat == StatType.LifePercent)
+                    {
+                        return perf.Cur * 100;
+                    }
+                    return perf.Cur;
+                }
+            }
+
+            // Special cases
+            if (stat == StatType.Perfection) return item.Perfection * 100;
+            if (stat == StatType.AncientRank) return item.AncientRank;
+            if (stat == StatType.SocketCount) return item.SocketCount;
+
+            return 0;
+        }
+
         private bool IsInArmorySet(IItem item)
         {
-            if (Hud.Game.Me.ArmorySets == null) return false;
-            return Hud.Game.Me.ArmorySets.Any(set => set?.ContainsItem(item) == true);
+            return Hud.Game.Me.ArmorySets?.Any(s => s?.ContainsItem(item) == true) ?? false;
         }
 
         private bool IsSalvageWindowOpen() => _salvageDialog?.Visible == true;
@@ -498,515 +578,498 @@
 
         public void PaintTopInGame(ClipState clipState)
         {
-            if (clipState != ClipState.Inventory) return;
-            if (!Hud.Game.IsInGame) return;
+            if (clipState != ClipState.Inventory || !Hud.Game.IsInGame) return;
             if (!IsSalvageWindowOpen() && !IsRepairWindowOpen()) return;
 
-            // Animate panel alpha
-            float targetAlpha = _showManager ? 1f : 0f;
-            _panelAlpha += (targetAlpha - _panelAlpha) * 0.15f;
+            // Update animations
+            UpdateAnimations();
 
             _clickAreas.Clear();
+            _tooltipText = null;
 
-            // Draw main control panel
             DrawMainPanel();
+            if (_panelSlide > 0.02f) DrawManagerPanel();
+            if (IsSalvageWindowOpen()) DrawItemHighlights();
 
-            // Draw profile manager with animation
-            if (_panelAlpha > 0.05f)
-            {
-                DrawProfileManager();
-            }
-
-            // Draw item highlights in inventory
-            if (IsSalvageWindowOpen())
-            {
-                DrawItemHighlights();
-            }
-
-            // Handle mouse interactions
             HandleMouseInput();
+            DrawTooltip();
+        }
+
+        private void UpdateAnimations()
+        {
+            float targetSlide = _showManager ? 1f : 0f;
+            _panelSlide += (targetSlide - _panelSlide) * 0.18f;
+            _pulsePhase = (_pulseTimer.ElapsedMilliseconds % 2000) / 2000f;
         }
 
         private void DrawMainPanel()
         {
-            var invRect = Hud.Inventory.InventoryMainUiElement.Rectangle;
-            float panelW = 220;
-            float panelH = 130;
-            float panelX = invRect.X - panelW - 15;
-            float panelY = invRect.Y;
+            var inv = Hud.Inventory.InventoryMainUiElement.Rectangle;
+            float w = 230, h = 145;
+            float x = Math.Max(10, inv.X - w - 15);
+            float y = inv.Y;
 
-            if (panelX < 10) panelX = 10;
+            // Panel background with glow when running
+            _surfaceBase.DrawRectangle(x, y, w, h);
+            var border = _isRunning ? _borderSuccess : _borderDefault;
+            border.DrawRectangle(x, y, w, h);
 
-            // Panel with rounded corners effect (via multiple rects)
-            DrawPanel(panelX, panelY, panelW, panelH, _isRunning);
+            // Accent bar
+            float accentW = 3;
+            var accent = _isRunning ? _statusSuccess : _statusInfo;
+            accent.DrawRectangle(x, y, accentW, h);
 
-            float pad = 12;
-            float x = panelX + pad;
-            float y = panelY + pad;
-            float contentW = panelW - pad * 2;
+            float pad = 14, cx = x + pad + accentW, cy = y + pad, cw = w - pad * 2 - accentW;
 
-            // Title with icon
-            string titleIcon = _isRunning ? "⚡" : "🔧";
-            var titleLayout = _titleFont.GetTextLayout($"{titleIcon} Smart Salvage");
-            _titleFont.DrawText(titleLayout, x, y);
-            y += titleLayout.Metrics.Height + 8;
+            // Title row
+            string icon = _isRunning ? "⚡" : "🔧";
+            var titleLayout = _fontTitle.GetTextLayout($"{icon} Smart Salvage");
+            _fontTitle.DrawText(titleLayout, cx, cy);
 
-            // Status line with progress
+            // Version badge
+            var verLayout = _fontMicro.GetTextLayout("v3.0");
+            _fontMicro.DrawText(verLayout, cx + cw - verLayout.Metrics.Width, cy + 2);
+            cy += titleLayout.Metrics.Height + 10;
+
+            // Progress/Status
             if (_isRunning)
             {
-                // Progress bar
-                float barH = 4;
-                _toggleTrackBrush.DrawRectangle(x, y, contentW, barH);
-                _successBrush.DrawRectangle(x, y, contentW * _progressValue, barH);
-                y += barH + 6;
+                // Progress bar with animation
+                float barH = 5;
+                _progressTrack.DrawRectangle(cx, cy, cw, barH);
+                _progressFill.DrawRectangle(cx, cy, cw * _progressValue, barH);
+                cy += barH + 6;
 
-                var statusLayout = _successFont.GetTextLayout(_statusMessage ?? "Running...");
-                _successFont.DrawText(statusLayout, x, y);
+                var statusLayout = _fontSuccess.GetTextLayout(_statusMessage ?? "Running...");
+                _fontSuccess.DrawText(statusLayout, cx, cy);
             }
             else if (_statusTimer.IsRunning && _statusTimer.ElapsedMilliseconds < 4000)
             {
                 var font = GetStatusFont(_statusType);
                 var statusLayout = font.GetTextLayout(_statusMessage ?? "");
-                font.DrawText(statusLayout, x, y);
+                font.DrawText(statusLayout, cx, cy);
             }
             else
             {
-                var infoLayout = _smallFont.GetTextLayout("Press U to start salvage");
-                _smallFont.DrawText(infoLayout, x, y);
+                var infoLayout = _fontMuted.GetTextLayout("Press U to start salvage");
+                _fontMuted.DrawText(infoLayout, cx, cy);
             }
-            y += 20;
+            cy += 22;
 
-            // Stats row
-            int salvageCount = IsSalvageWindowOpen() ? GetItemsToSalvage().Count : 0;
-            int protectedCount = BlacklistMgr.GetActiveItemCount();
-            int enabledProfiles = BlacklistMgr.GetEnabledProfileCount();
+            // Stats badges
+            int toSalvage = IsSalvageWindowOpen() ? GetItemsToSalvage().Count : 0;
+            int protect = BlacklistMgr.GetActiveItemCount();
+            int rules = RulesMgr.StatRules.Count(r => r.IsEnabled);
 
-            // Protected items badge
-            DrawBadge(x, y, $"🛡 {protectedCount}", _successBrush, _bodyFont);
-            
-            // Salvage items badge
-            float badgeX = x + 70;
-            DrawBadge(badgeX, y, $"🗑 {salvageCount}", salvageCount > 0 ? _errorBrush : _infoBrush, _bodyFont);
-            
-            // Profiles badge
-            badgeX += 60;
-            DrawBadge(badgeX, y, $"📋 {enabledProfiles}", _infoBrush, _bodyFont);
-            y += 26;
+            DrawStatBadge(cx, cy, "🛡", protect.ToString(), _statusSuccess);
+            DrawStatBadge(cx + 55, cy, "🗑", toSalvage.ToString(), toSalvage > 0 ? _statusError : _statusInfo);
+            DrawStatBadge(cx + 105, cy, "📐", rules.ToString(), _statusInfo);
+            cy += 28;
 
             // Manager button
-            float btnW = contentW;
-            float btnH = 24;
-            var btnRect = new RectangleF(x, y, btnW, btnH);
+            float btnH = 26;
+            var btnRect = new RectangleF(cx, cy, cw, btnH);
             _clickAreas["manager"] = btnRect;
-
             bool hovered = IsMouseOver(btnRect);
-            DrawButton(btnRect, _showManager ? "▼ Close Profiles" : "▶ Manage Profiles [Shift+U]", hovered, false);
+            DrawButton(btnRect, _showManager ? "▼ Close Panel" : "▶ Open Panel [Shift+U]", hovered);
         }
 
-        private void DrawProfileManager()
+        private void DrawManagerPanel()
         {
-            var invRect = Hud.Inventory.InventoryMainUiElement.Rectangle;
-            float panelW = 300;
-            float panelH = 480;
-            float panelX = invRect.X - panelW - 15;
-            float panelY = 145 + invRect.Y;
+            var inv = Hud.Inventory.InventoryMainUiElement.Rectangle;
+            float w = 320, h = 520;
+            float baseX = inv.X - w - 15;
+            float x = baseX - (1f - _panelSlide) * 40;
+            float y = inv.Y + 155;
 
-            if (panelX < 10) panelX = 10;
-            if (panelY + panelH > Hud.Window.Size.Height - 20)
-                panelH = Hud.Window.Size.Height - panelY - 20;
+            if (x < 10) x = 10;
+            if (y + h > Hud.Window.Size.Height - 20) h = Hud.Window.Size.Height - y - 20;
 
-            // Animated panel
-            float animatedX = panelX - (1f - _panelAlpha) * 30;
-            byte alphaByte = (byte)(_panelAlpha * 255);
-
-            // Panel background
-            var panelBrushAnim = Hud.Render.CreateBrush(alphaByte, 22, 22, 30, 0);
-            panelBrushAnim.DrawRectangle(animatedX, panelY, panelW, panelH);
+            byte alpha = (byte)(_panelSlide * 250);
+            var panelBrush = Hud.Render.CreateBrush(alpha, 18, 18, 24, 0);
+            panelBrush.DrawRectangle(x, y, w, h);
             
-            var borderBrushAnim = Hud.Render.CreateBrush((byte)(_panelAlpha * 200), 50, 50, 65, 1.5f);
-            borderBrushAnim.DrawRectangle(animatedX, panelY, panelW, panelH);
+            var borderBrush = Hud.Render.CreateBrush((byte)(_panelSlide * 180), 55, 58, 75, 1f);
+            borderBrush.DrawRectangle(x, y, w, h);
 
-            float pad = 12;
-            float x = animatedX + pad;
-            float y = panelY + pad;
-            float contentW = panelW - pad * 2;
+            float pad = 14, cx = x + pad, cy = y + pad, cw = w - pad * 2;
 
             // Tab bar
-            float tabW = (contentW - 8) / 3;
-            float tabH = 26;
-            string[] tabs = { "profiles", "import", "settings" };
-            string[] tabLabels = { "📋 Profiles", "🌐 Import", "⚙ Settings" };
+            string[] tabs = { "profiles", "rules", "global", "import" };
+            string[] labels = { "📋 Profiles", "📐 Rules", "⚙ Global", "🌐 Import" };
+            float tabW = (cw - 12) / 4;
+            float tabH = 28;
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
-                var tabRect = new RectangleF(x + (tabW + 4) * i, y, tabW, tabH);
-                _clickAreas[$"tab_{tabs[i]}"] = tabRect;
-                
-                bool isActive = _activeTab == tabs[i];
-                bool isHovered = IsMouseOver(tabRect);
-                
-                var brush = isActive ? _buttonActiveBrush : (isHovered ? _buttonHoverBrush : _buttonBrush);
-                brush.DrawRectangle(tabRect);
-                
-                var tabLayout = _smallFont.GetTextLayout(tabLabels[i]);
-                _smallFont.DrawText(tabLayout, tabRect.X + (tabW - tabLayout.Metrics.Width) / 2, 
-                                   tabRect.Y + (tabH - tabLayout.Metrics.Height) / 2);
+                var rect = new RectangleF(cx + (tabW + 4) * i, cy, tabW, tabH);
+                _clickAreas[$"tab_{tabs[i]}"] = rect;
+                bool active = _activeTab == tabs[i];
+                bool hover = IsMouseOver(rect);
+
+                var brush = active ? _btnActive : (hover ? _btnHover : _btnDefault);
+                brush.DrawRectangle(rect);
+
+                var font = active ? _fontBody : _fontSmall;
+                var layout = font.GetTextLayout(labels[i]);
+                font.DrawText(layout, rect.X + (tabW - layout.Metrics.Width) / 2, rect.Y + (tabH - layout.Metrics.Height) / 2);
             }
-            y += tabH + 12;
+            cy += tabH + 14;
 
             // Tab content
+            float contentH = h - (cy - y) - pad;
             switch (_activeTab)
             {
-                case "profiles":
-                    DrawProfilesTab(x, y, contentW, panelH - (y - panelY) - pad);
-                    break;
-                case "import":
-                    DrawImportTab(x, y, contentW, panelH - (y - panelY) - pad);
-                    break;
-                case "settings":
-                    DrawSettingsTab(x, y, contentW, panelH - (y - panelY) - pad);
-                    break;
+                case "profiles": DrawProfilesTab(cx, cy, cw, contentH); break;
+                case "rules": DrawRulesTab(cx, cy, cw, contentH); break;
+                case "global": DrawGlobalTab(cx, cy, cw, contentH); break;
+                case "import": DrawImportTab(cx, cy, cw, contentH); break;
             }
         }
 
-        private void DrawProfilesTab(float x, float y, float contentW, float contentH)
+        private void DrawProfilesTab(float x, float y, float w, float h)
         {
-            // Header with count
-            var headerLayout = _headerFont.GetTextLayout($"Build Profiles ({BlacklistMgr.GetEnabledProfileCount()}/{BlacklistMgr.Profiles.Count})");
-            _headerFont.DrawText(headerLayout, x, y);
-            y += headerLayout.Metrics.Height + 8;
+            // Header
+            var headerLayout = _fontHeader.GetTextLayout($"Build Profiles ({BlacklistMgr.GetEnabledProfileCount()}/{BlacklistMgr.Profiles.Count})");
+            _fontHeader.DrawText(headerLayout, x, y);
+            y += headerLayout.Metrics.Height + 10;
 
             // Quick actions
-            float btnW = (contentW - 8) / 2;
-            float btnH = 22;
-
-            var enableAllRect = new RectangleF(x, y, btnW, btnH);
-            _clickAreas["enable_all"] = enableAllRect;
-            DrawButton(enableAllRect, "Enable All", IsMouseOver(enableAllRect), false);
-
-            var disableAllRect = new RectangleF(x + btnW + 8, y, btnW, btnH);
-            _clickAreas["disable_all"] = disableAllRect;
-            DrawButton(disableAllRect, "Disable All", IsMouseOver(disableAllRect), false);
+            float btnW = (w - 10) / 2, btnH = 24;
+            var enableRect = new RectangleF(x, y, btnW, btnH);
+            var disableRect = new RectangleF(x + btnW + 10, y, btnW, btnH);
+            _clickAreas["enable_all"] = enableRect;
+            _clickAreas["disable_all"] = disableRect;
+            DrawButton(enableRect, "✓ Enable All", IsMouseOver(enableRect));
+            DrawButton(disableRect, "✗ Disable All", IsMouseOver(disableRect));
             y += btnH + 12;
 
             // Profile list
-            var profiles = BlacklistMgr.Profiles.Values.OrderByDescending(p => p.IsEnabled).ThenBy(p => p.DisplayName).ToList();
-            float rowH = 36;
-            int visibleCount = Math.Min(_maxVisibleProfiles, profiles.Count - _scrollOffset);
-            float listH = contentH - (y - (y - rowH * 2));
+            var profiles = BlacklistMgr.Profiles.Values
+                .OrderByDescending(p => p.IsEnabled)
+                .ThenBy(p => p.DisplayName)
+                .ToList();
 
-            // Scrollable area
-            for (int i = 0; i < visibleCount && i + _scrollOffset < profiles.Count; i++)
+            float rowH = 42;
+            int visible = Math.Min(_maxVisibleItems, profiles.Count - _scrollOffset);
+
+            for (int i = 0; i < visible && i + _scrollOffset < profiles.Count; i++)
             {
-                var profile = profiles[i + _scrollOffset];
-                var rowRect = new RectangleF(x, y, contentW - 12, rowH);
-                _clickAreas[$"profile_{profile.Id}"] = rowRect;
+                var p = profiles[i + _scrollOffset];
+                var rect = new RectangleF(x, y, w - 14, rowH);
+                _clickAreas[$"profile_{p.Id}"] = rect;
 
-                bool isHovered = IsMouseOver(rowRect);
+                bool hover = IsMouseOver(rect);
+                var rowBrush = hover ? _surfaceOverlay : _surfaceCard;
+                rowBrush.DrawRectangle(rect);
+
+                // Toggle
+                float toggleW = 40, toggleH = 20;
+                float tx = x + 8, ty = y + (rowH - toggleH) / 2;
+                _toggleTrack.DrawRectangle(tx, ty, toggleW, toggleH);
                 
-                // Row background
-                var rowBrush = isHovered ? _buttonHoverBrush : _panelDarkBrush;
-                rowBrush.DrawRectangle(rowRect);
+                float knobSize = toggleH - 4;
+                float knobX = p.IsEnabled ? tx + toggleW - knobSize - 2 : tx + 2;
+                var knobBrush = p.IsEnabled ? _toggleOn : _toggleOff;
+                knobBrush.DrawRectangle(knobX, ty + 2, knobSize, knobSize);
 
-                // Toggle switch
-                float toggleW = 36;
-                float toggleH = 18;
-                float toggleX = x + 8;
-                float toggleY = y + (rowH - toggleH) / 2;
-                
-                _toggleTrackBrush.DrawRectangle(toggleX, toggleY, toggleW, toggleH);
-                var toggleBrush = profile.IsEnabled ? _toggleOnBrush : _toggleOffBrush;
-                float knobX = profile.IsEnabled ? toggleX + toggleW - toggleH + 2 : toggleX + 2;
-                toggleBrush.DrawRectangle(knobX, toggleY + 2, toggleH - 4, toggleH - 4);
+                // Info
+                float textX = tx + toggleW + 12;
+                string icon = p.Icon ?? "📋";
+                string name = p.DisplayName;
+                if (name.Length > 22) name = name.Substring(0, 19) + "...";
 
-                // Profile info
-                float textX = toggleX + toggleW + 10;
-                
-                // Icon + Name
-                string icon = profile.Icon ?? "📋";
-                string displayName = profile.DisplayName;
-                if (displayName.Length > 25) displayName = displayName.Substring(0, 22) + "...";
-                
-                var nameFont = profile.IsEnabled ? _bodyFont : _smallFont;
-                var nameLayout = nameFont.GetTextLayout($"{icon} {displayName}");
-                nameFont.DrawText(nameLayout, textX, y + 4);
+                var nameFont = p.IsEnabled ? _fontBody : _fontMuted;
+                var nameLayout = nameFont.GetTextLayout($"{icon} {name}");
+                nameFont.DrawText(nameLayout, textX, y + 6);
 
-                // Item count
-                string countText = $"{profile.Items.Count} items";
-                var countLayout = _smallFont.GetTextLayout(countText);
-                _smallFont.DrawText(countLayout, textX, y + 4 + nameLayout.Metrics.Height);
+                var countLayout = _fontMicro.GetTextLayout($"{p.Items.Count} items");
+                _fontMicro.DrawText(countLayout, textX, y + 6 + nameLayout.Metrics.Height + 2);
 
-                // Source indicator
-                if (!string.IsNullOrEmpty(profile.SourceUrl))
-                {
-                    var srcLayout = _smallFont.GetTextLayout("🌐");
-                    _smallFont.DrawText(srcLayout, rowRect.Right - 24, y + (rowH - srcLayout.Metrics.Height) / 2);
-                }
-
-                y += rowH + 2;
+                y += rowH + 3;
             }
 
-            // Scrollbar if needed
-            if (profiles.Count > _maxVisibleProfiles)
+            // Scrollbar
+            if (profiles.Count > _maxVisibleItems)
             {
-                float scrollX = x + contentW - 8;
-                float scrollH = rowH * visibleCount;
-                float scrollY = y - scrollH - 2;
-                
-                _scrollTrackBrush.DrawRectangle(scrollX, scrollY, 6, scrollH);
-                
-                float thumbH = scrollH * ((float)visibleCount / profiles.Count);
-                float thumbY = scrollY + (scrollH - thumbH) * ((float)_scrollOffset / (profiles.Count - visibleCount));
-                _scrollThumbBrush.DrawRectangle(scrollX, thumbY, 6, thumbH);
+                float sx = x + w - 10, sh = rowH * visible, sy = y - sh - 3;
+                _scrollTrack.DrawRectangle(sx, sy, 6, sh);
+                float thumbH = sh * ((float)visible / profiles.Count);
+                float thumbY = sy + (sh - thumbH) * ((float)_scrollOffset / Math.Max(1, profiles.Count - visible));
+                _scrollThumb.DrawRectangle(sx, thumbY, 6, thumbH);
 
-                // Scroll areas
-                _clickAreas["scroll_up"] = new RectangleF(scrollX - 20, scrollY, 30, scrollH / 2);
-                _clickAreas["scroll_down"] = new RectangleF(scrollX - 20, scrollY + scrollH / 2, 30, scrollH / 2);
+                _clickAreas["scroll_up"] = new RectangleF(sx - 15, sy, 25, sh / 2);
+                _clickAreas["scroll_down"] = new RectangleF(sx - 15, sy + sh / 2, 25, sh / 2);
             }
         }
 
-        private void DrawImportTab(float x, float y, float contentW, float contentH)
+        private void DrawRulesTab(float x, float y, float w, float h)
         {
-            // Header
-            var headerLayout = _headerFont.GetTextLayout("Import from Build Guides");
-            _headerFont.DrawText(headerLayout, x, y);
+            var headerLayout = _fontHeader.GetTextLayout("Stat-Based Rules");
+            _fontHeader.DrawText(headerLayout, x, y);
             y += headerLayout.Metrics.Height + 6;
 
-            // Supported sites
-            var sitesLayout = _smallFont.GetTextLayout("Supported: Maxroll.gg, Icy-Veins.com");
-            _smallFont.DrawText(sitesLayout, x, y);
-            y += sitesLayout.Metrics.Height + 12;
+            var descLayout = _fontMuted.GetTextLayout("Keep items only if they meet stat requirements");
+            _fontMuted.DrawText(descLayout, x, y);
+            y += descLayout.Metrics.Height + 12;
 
-            // URL Input
-            var labelLayout = _bodyFont.GetTextLayout("Build Guide URL:");
-            _bodyFont.DrawText(labelLayout, x, y);
-            y += labelLayout.Metrics.Height + 4;
+            // Rules list
+            float rowH = 48;
+            foreach (var rule in RulesMgr.StatRules)
+            {
+                var rect = new RectangleF(x, y, w - 14, rowH);
+                _clickAreas[$"rule_{rule.Id}"] = rect;
 
-            float inputH = 28;
-            var inputRect = new RectangleF(x, y, contentW, inputH);
+                bool hover = IsMouseOver(rect);
+                var rowBrush = hover ? _surfaceOverlay : _surfaceCard;
+                rowBrush.DrawRectangle(rect);
+
+                // Toggle
+                float toggleW = 40, toggleH = 20;
+                float tx = x + 8, ty = y + (rowH - toggleH) / 2;
+                _toggleTrack.DrawRectangle(tx, ty, toggleW, toggleH);
+                
+                float knobSize = toggleH - 4;
+                float knobX = rule.IsEnabled ? tx + toggleW - knobSize - 2 : tx + 2;
+                var knobBrush = rule.IsEnabled ? _toggleOn : _toggleOff;
+                knobBrush.DrawRectangle(knobX, ty + 2, knobSize, knobSize);
+
+                // Info
+                float textX = tx + toggleW + 12;
+                var nameFont = rule.IsEnabled ? _fontBody : _fontMuted;
+                var nameLayout = nameFont.GetTextLayout($"📐 {rule.ItemName}");
+                nameFont.DrawText(nameLayout, textX, y + 6);
+
+                // Conditions summary
+                string condText = string.Join(rule.Logic == RuleLogic.And ? " AND " : " OR ", 
+                    rule.Conditions.Select(c => c.ToString()));
+                if (condText.Length > 35) condText = condText.Substring(0, 32) + "...";
+                var condLayout = _fontMicro.GetTextLayout(condText);
+                _fontMicro.DrawText(condLayout, textX, y + 8 + nameLayout.Metrics.Height);
+
+                y += rowH + 3;
+            }
+
+            // Info
+            y += 10;
+            var infoLayout = _fontMuted.GetTextLayout("Example: Keep 'Dawn' only if CDR ≥ 8%");
+            _fontMuted.DrawText(infoLayout, x, y);
+        }
+
+        private void DrawGlobalTab(float x, float y, float w, float h)
+        {
+            var headerLayout = _fontHeader.GetTextLayout("Global Rules");
+            _fontHeader.DrawText(headerLayout, x, y);
+            y += headerLayout.Metrics.Height + 6;
+
+            var descLayout = _fontMuted.GetTextLayout("These rules override all other settings");
+            _fontMuted.DrawText(descLayout, x, y);
+            y += descLayout.Metrics.Height + 14;
+
+            var gr = RulesMgr.GlobalRules;
+
+            // Always Keep section
+            var keepHeader = _fontAccent.GetTextLayout("🛡 Always Keep:");
+            _fontAccent.DrawText(keepHeader, x, y);
+            y += keepHeader.Metrics.Height + 8;
+
+            DrawGlobalToggle(x, y, w, "Primal Items", gr.AlwaysKeepPrimals, "global_primals");
+            y += 32;
+            DrawGlobalToggle(x, y, w, "Ancient Items", gr.AlwaysKeepAncients, "global_ancients");
+            y += 32;
+            DrawGlobalToggle(x, y, w, "Set Items", gr.AlwaysKeepSetItems, "global_sets");
+            y += 32;
+            DrawGlobalToggle(x, y, w, $"High Perfection (≥{gr.HighPerfectionThreshold:F0}%)", gr.AlwaysKeepHighPerfection, "global_highperf");
+            y += 40;
+
+            // Protection section
+            var protHeader = _fontAccent.GetTextLayout("🔒 Protection:");
+            _fontAccent.DrawText(protHeader, x, y);
+            y += protHeader.Metrics.Height + 8;
+
+            DrawGlobalToggle(x, y, w, "Socketed Items", gr.ProtectSocketedItems, "global_socketed");
+            y += 32;
+            DrawGlobalToggle(x, y, w, "Enchanted Items", gr.ProtectEnchantedItems, "global_enchanted");
+            y += 32;
+            DrawGlobalToggle(x, y, w, "Armory Items", gr.ProtectArmoryItems, "global_armory");
+            y += 32;
+            DrawGlobalToggle(x, y, w, "Locked Slots", gr.ProtectLockedSlots, "global_locked");
+        }
+
+        private void DrawGlobalToggle(float x, float y, float w, string label, bool value, string clickId)
+        {
+            var rect = new RectangleF(x, y - 4, w - 14, 28);
+            _clickAreas[clickId] = rect;
+
+            bool hover = IsMouseOver(rect);
+            if (hover) _surfaceOverlay.DrawRectangle(rect);
+
+            var labelLayout = _fontBody.GetTextLayout(label);
+            _fontBody.DrawText(labelLayout, x + 8, y);
+
+            // Toggle on right
+            float toggleW = 40, toggleH = 18;
+            float tx = x + w - 14 - toggleW - 8, ty = y - 1;
+            _toggleTrack.DrawRectangle(tx, ty, toggleW, toggleH);
+            
+            float knobSize = toggleH - 4;
+            float knobX = value ? tx + toggleW - knobSize - 2 : tx + 2;
+            var knobBrush = value ? _toggleOn : _toggleOff;
+            knobBrush.DrawRectangle(knobX, ty + 2, knobSize, knobSize);
+        }
+
+        private void DrawImportTab(float x, float y, float w, float h)
+        {
+            var headerLayout = _fontHeader.GetTextLayout("Import from Build Guides");
+            _fontHeader.DrawText(headerLayout, x, y);
+            y += headerLayout.Metrics.Height + 6;
+
+            var sitesLayout = _fontMuted.GetTextLayout("Supported: Maxroll.gg • Icy-Veins.com");
+            _fontMuted.DrawText(sitesLayout, x, y);
+            y += sitesLayout.Metrics.Height + 14;
+
+            // URL input
+            var labelLayout = _fontBody.GetTextLayout("Build Guide URL:");
+            _fontBody.DrawText(labelLayout, x, y);
+            y += labelLayout.Metrics.Height + 6;
+
+            float inputH = 30;
+            var inputRect = new RectangleF(x, y, w - 14, inputH);
             _clickAreas["import_input"] = inputRect;
 
-            bool inputHovered = IsMouseOver(inputRect);
-            var inputBrush = inputHovered ? _inputFocusBrush : _inputBrush;
+            bool inputHover = IsMouseOver(inputRect);
+            var inputBrush = inputHover ? _surfaceOverlay : _surfaceCard;
             inputBrush.DrawRectangle(inputRect);
-            _borderBrush.DrawRectangle(inputRect);
+            _borderDefault.DrawRectangle(inputRect);
 
-            // URL text
             string displayUrl = string.IsNullOrEmpty(_importUrl) ? "Click to paste URL from clipboard..." : _importUrl;
-            if (displayUrl.Length > 40) displayUrl = displayUrl.Substring(0, 37) + "...";
-            
-            var urlFont = string.IsNullOrEmpty(_importUrl) ? _smallFont : _monoFont;
+            if (displayUrl.Length > 42) displayUrl = displayUrl.Substring(0, 39) + "...";
+            var urlFont = string.IsNullOrEmpty(_importUrl) ? _fontMuted : _fontMono;
             var urlLayout = urlFont.GetTextLayout(displayUrl);
-            urlFont.DrawText(urlLayout, x + 8, y + (inputH - urlLayout.Metrics.Height) / 2);
+            urlFont.DrawText(urlLayout, x + 10, y + (inputH - urlLayout.Metrics.Height) / 2);
             y += inputH + 12;
 
             // Import button
-            float btnH = 32;
-            var importRect = new RectangleF(x, y, contentW, btnH);
+            float btnH = 34;
+            var importRect = new RectangleF(x, y, w - 14, btnH);
             _clickAreas["import_btn"] = importRect;
+            string importText = _isImporting ? "⏳ Importing..." : "🌐 Import Build";
+            DrawButton(importRect, importText, IsMouseOver(importRect), _isImporting);
+            y += btnH + 10;
 
-            bool importHovered = IsMouseOver(importRect);
-            string importText = _isImporting ? "Importing..." : "🌐 Import Build";
-            DrawButton(importRect, importText, importHovered, _isImporting);
-            y += btnH + 12;
-
-            // Status message
+            // Status
             if (!string.IsNullOrEmpty(_importStatus))
             {
                 var statusFont = GetStatusFont(_importStatusType);
                 var statusLayout = statusFont.GetTextLayout(_importStatus);
                 statusFont.DrawText(statusLayout, x, y);
-                y += statusLayout.Metrics.Height + 12;
+                y += statusLayout.Metrics.Height + 10;
             }
 
-            // Example URLs
-            y += 8;
-            var exampleHeader = _smallFont.GetTextLayout("Example URLs:");
-            _smallFont.DrawText(exampleHeader, x, y);
-            y += exampleHeader.Metrics.Height + 4;
-
-            string[] examples = {
-                "maxroll.gg/d3/guides/god-ha-demon-hunter-guide",
-                "icy-veins.com/d3/god-hungering-arrow-demon-hunter"
-            };
-
-            foreach (var example in examples)
-            {
-                var exLayout = _monoFont.GetTextLayout("• " + example);
-                _monoFont.DrawText(exLayout, x, y);
-                y += exLayout.Metrics.Height + 2;
-            }
-
-            // Action buttons at bottom
-            y = contentH - 30;
-            float actionBtnW = (contentW - 8) / 2;
-            float actionBtnH = 24;
-
-            var saveRect = new RectangleF(x, y, actionBtnW, actionBtnH);
+            // Save/Export
+            y = h - 40;
+            float actionBtnW = (w - 24) / 2;
+            var saveRect = new RectangleF(x, y, actionBtnW, 28);
+            var exportRect = new RectangleF(x + actionBtnW + 10, y, actionBtnW, 28);
             _clickAreas["save"] = saveRect;
-            DrawButton(saveRect, "💾 Save", IsMouseOver(saveRect), false);
-
-            var exportRect = new RectangleF(x + actionBtnW + 8, y, actionBtnW, actionBtnH);
             _clickAreas["export"] = exportRect;
-            DrawButton(exportRect, "📤 Export All", IsMouseOver(exportRect), false);
-        }
-
-        private void DrawSettingsTab(float x, float y, float contentW, float contentH)
-        {
-            // Header
-            var headerLayout = _headerFont.GetTextLayout("Salvage Settings");
-            _headerFont.DrawText(headerLayout, x, y);
-            y += headerLayout.Metrics.Height + 16;
-
-            // Ancient items setting
-            DrawSettingRow(x, y, contentW, "Ancient Items:", 
-                           SalvageAncient == 1 ? "Never salvage" : (SalvageAncient == 2 ? "Always salvage" : "Smart"),
-                           "setting_ancient");
-            y += 40;
-
-            // Primal items setting
-            DrawSettingRow(x, y, contentW, "Primal Items:", 
-                           SalvagePrimal == 1 ? "Never salvage" : (SalvagePrimal == 2 ? "Always salvage" : "Smart"),
-                           "setting_primal");
-            y += 40;
-
-            // Auto repair
-            DrawSettingRow(x, y, contentW, "Auto Repair:", 
-                           AutoRepair ? "Enabled" : "Disabled",
-                           "setting_repair");
-            y += 50;
-
-            // Info section
-            var infoHeader = _smallFont.GetTextLayout("Always Protected:");
-            _smallFont.DrawText(infoHeader, x, y);
-            y += infoHeader.Metrics.Height + 4;
-
-            string[] protected_items = {
-                "• Items in Armory sets",
-                "• Enchanted items",
-                "• Socketed items",
-                "• Locked inventory slots",
-                "• Puzzle Ring, Bovine Bardiche",
-                "• Ramaladni's Gift"
-            };
-
-            foreach (var item in protected_items)
-            {
-                var itemLayout = _smallFont.GetTextLayout(item);
-                _smallFont.DrawText(itemLayout, x, y);
-                y += itemLayout.Metrics.Height + 1;
-            }
-        }
-
-        private void DrawSettingRow(float x, float y, float w, string label, string value, string clickId)
-        {
-            var labelLayout = _bodyFont.GetTextLayout(label);
-            _bodyFont.DrawText(labelLayout, x, y);
-
-            float btnW = 120;
-            float btnH = 24;
-            var btnRect = new RectangleF(x + w - btnW, y - 2, btnW, btnH);
-            _clickAreas[clickId] = btnRect;
-
-            DrawButton(btnRect, value, IsMouseOver(btnRect), false);
+            DrawButton(saveRect, "💾 Save", IsMouseOver(saveRect));
+            DrawButton(exportRect, "📤 Export", IsMouseOver(exportRect));
         }
 
         private void DrawItemHighlights()
         {
-            var itemsToSalvage = GetItemsToSalvage();
-            var salvageIds = new HashSet<string>(itemsToSalvage.Select(i => i.ItemUniqueId));
+            var toSalvage = new HashSet<string>(GetItemsToSalvage().Select(i => i.ItemUniqueId));
 
             foreach (var item in Hud.Inventory.ItemsInInventory)
             {
                 var rect = Hud.Inventory.GetItemRect(item);
                 if (rect == RectangleF.Empty) continue;
 
-                if (salvageIds.Contains(item.ItemUniqueId))
+                if (toSalvage.Contains(item.ItemUniqueId))
                 {
-                    // Item will be salvaged - red
-                    if (item.AncientRank == 2)
-                        _primalHighlight.DrawRectangle(rect);
-                    else if (item.AncientRank == 1)
-                        _ancientHighlight.DrawRectangle(rect);
-                    else
-                        _salvageHighlight.DrawRectangle(rect);
+                    var brush = item.AncientRank == 2 ? _highlightPrimal :
+                                item.AncientRank == 1 ? _highlightAncient : _highlightSalvage;
+                    brush.DrawRectangle(rect);
                 }
-                else if (IsItemBlacklisted(item))
+                else
                 {
-                    // Item is protected - green
-                    _protectedHighlight.DrawRectangle(rect);
+                    // Check if protected by stat rule
+                    string name = item.SnoItem.NameEnglish ?? "";
+                    var rule = RulesMgr.GetRule(name);
+                    if (rule != null && EvaluateStatRule(item, rule))
+                    {
+                        _highlightStatRule.DrawRectangle(rect);
+                    }
+                    else if (IsItemBlacklisted(item))
+                    {
+                        _highlightProtected.DrawRectangle(rect);
+                    }
                 }
             }
         }
 
         private bool IsItemBlacklisted(IItem item)
         {
-            string itemName = item.SnoItem.NameLocalized ?? "";
-            string fullName = item.FullNameLocalized ?? "";
-            string englishName = item.SnoItem.NameEnglish ?? "";
-            return BlacklistMgr.IsBlacklisted(itemName, fullName, englishName);
+            string a = item.SnoItem.NameLocalized ?? "";
+            string b = item.FullNameLocalized ?? "";
+            string c = item.SnoItem.NameEnglish ?? "";
+            return BlacklistMgr.IsBlacklisted(a, b, c);
         }
 
         #endregion
 
         #region UI Helpers
 
-        private void DrawPanel(float x, float y, float w, float h, bool active)
+        private void DrawButton(RectangleF rect, string text, bool hovered, bool disabled = false)
         {
-            _panelBrush.DrawRectangle(x, y, w, h);
-            
-            var border = active ? _accentBorderBrush : _borderBrush;
-            border.DrawRectangle(x, y, w, h);
-
-            // Accent bar on left
-            var accent = active ? _successBrush : _infoBrush;
-            accent.DrawRectangle(x, y, 3, h);
-        }
-
-        private void DrawButton(RectangleF rect, string text, bool hovered, bool disabled)
-        {
-            var brush = disabled ? _toggleTrackBrush : (hovered ? _buttonHoverBrush : _buttonBrush);
+            var brush = disabled ? _btnDisabled : (hovered ? _btnHover : _btnDefault);
             brush.DrawRectangle(rect);
-
-            var layout = _bodyFont.GetTextLayout(text);
-            _bodyFont.DrawText(layout, rect.X + (rect.Width - layout.Metrics.Width) / 2,
+            var layout = _fontBody.GetTextLayout(text);
+            _fontBody.DrawText(layout, rect.X + (rect.Width - layout.Metrics.Width) / 2,
                               rect.Y + (rect.Height - layout.Metrics.Height) / 2);
         }
 
-        private void DrawBadge(float x, float y, string text, IBrush bgBrush, IFont font)
+        private void DrawStatBadge(float x, float y, string icon, string value, IBrush bg)
         {
-            var layout = font.GetTextLayout(text);
-            float badgeW = layout.Metrics.Width + 12;
-            float badgeH = layout.Metrics.Height + 6;
+            var iconLayout = _fontIcon.GetTextLayout(icon);
+            var valLayout = _fontBody.GetTextLayout(value);
+            float w = iconLayout.Metrics.Width + valLayout.Metrics.Width + 12;
+            float h = Math.Max(iconLayout.Metrics.Height, valLayout.Metrics.Height) + 6;
 
-            bgBrush.DrawRectangle(x, y, badgeW, badgeH);
-            font.DrawText(layout, x + 6, y + 3);
+            bg.DrawRectangle(x, y, w, h);
+            _fontIcon.DrawText(iconLayout, x + 4, y + 3);
+            _fontBody.DrawText(valLayout, x + iconLayout.Metrics.Width + 8, y + 3);
+        }
+
+        private void DrawTooltip()
+        {
+            if (string.IsNullOrEmpty(_tooltipText)) return;
+            // TODO: Implement tooltip rendering
         }
 
         private IFont GetStatusFont(StatusType type)
         {
-            switch (type)
+            return type switch
             {
-                case StatusType.Success: return _successFont;
-                case StatusType.Warning: return _warningFont;
-                case StatusType.Error: return _warningFont;
-                default: return _accentFont;
-            }
+                StatusType.Success => _fontSuccess,
+                StatusType.Warning => _fontWarning,
+                StatusType.Error => _fontError,
+                _ => _fontAccent
+            };
         }
 
-        private void SetStatus(string message, StatusType type)
+        private void SetStatus(string msg, StatusType type)
         {
-            _statusMessage = message;
+            _statusMessage = msg;
             _statusType = type;
             _statusTimer.Restart();
         }
 
         private bool IsMouseOver(RectangleF rect)
         {
-            int mx = Hud.Window.CursorX;
-            int my = Hud.Window.CursorY;
-            return mx >= rect.X && mx <= rect.X + rect.Width &&
-                   my >= rect.Y && my <= rect.Y + rect.Height;
+            int mx = Hud.Window.CursorX, my = Hud.Window.CursorY;
+            return mx >= rect.X && mx <= rect.X + rect.Width && my >= rect.Y && my <= rect.Y + rect.Height;
         }
 
         #endregion
@@ -1017,145 +1080,88 @@
         {
             if (_isRunning) return;
 
-            bool isMouseDown = Hud.Input.IsKeyDown(Keys.LButton);
-            bool clicked = !isMouseDown && _wasMouseDown && _clickTimer.ElapsedMilliseconds > 150;
-            _wasMouseDown = isMouseDown;
-
-            // Handle scroll wheel
-            // TODO: Add scroll wheel support if available in TurboHUD
+            bool down = Hud.Input.IsKeyDown(Keys.LButton);
+            bool clicked = !down && _wasMouseDown && _clickTimer.ElapsedMilliseconds > 150;
+            _wasMouseDown = down;
 
             if (!clicked) return;
             _clickTimer.Restart();
 
-            // Check click areas
             foreach (var kvp in _clickAreas)
-            {
-                if (!IsMouseOver(kvp.Value)) continue;
-
-                HandleClick(kvp.Key);
-                return;
-            }
+                if (IsMouseOver(kvp.Value)) { HandleClick(kvp.Key); return; }
         }
 
-        private void HandleClick(string areaId)
+        private void HandleClick(string id)
         {
-            // Manager toggle
-            if (areaId == "manager")
+            if (id == "manager") { _showManager = !_showManager; _scrollOffset = 0; return; }
+
+            if (id.StartsWith("tab_")) { _activeTab = id.Substring(4); return; }
+
+            if (id.StartsWith("profile_"))
             {
-                _showManager = !_showManager;
-                _scrollOffset = 0;
+                BlacklistMgr.ToggleProfile(id.Substring(8));
                 return;
             }
 
-            // Tabs
-            if (areaId.StartsWith("tab_"))
+            if (id.StartsWith("rule_"))
             {
-                _activeTab = areaId.Substring(4);
+                RulesMgr.ToggleRule(id.Substring(5));
                 return;
             }
 
-            // Profile toggle
-            if (areaId.StartsWith("profile_"))
+            // Global toggles
+            var gr = RulesMgr.GlobalRules;
+            switch (id)
             {
-                string profileId = areaId.Substring(8);
-                BlacklistMgr.ToggleProfile(profileId);
-                return;
+                case "global_primals": gr.AlwaysKeepPrimals = !gr.AlwaysKeepPrimals; return;
+                case "global_ancients": gr.AlwaysKeepAncients = !gr.AlwaysKeepAncients; return;
+                case "global_sets": gr.AlwaysKeepSetItems = !gr.AlwaysKeepSetItems; return;
+                case "global_highperf": gr.AlwaysKeepHighPerfection = !gr.AlwaysKeepHighPerfection; return;
+                case "global_socketed": gr.ProtectSocketedItems = !gr.ProtectSocketedItems; return;
+                case "global_enchanted": gr.ProtectEnchantedItems = !gr.ProtectEnchantedItems; return;
+                case "global_armory": gr.ProtectArmoryItems = !gr.ProtectArmoryItems; return;
+                case "global_locked": gr.ProtectLockedSlots = !gr.ProtectLockedSlots; return;
             }
 
-            // Enable/Disable all
-            if (areaId == "enable_all")
+            if (id == "enable_all")
             {
-                foreach (var profile in BlacklistMgr.Profiles.Values)
-                    profile.IsEnabled = true;
+                foreach (var p in BlacklistMgr.Profiles.Values) p.IsEnabled = true;
                 BlacklistMgr.RebuildActiveBlacklist();
                 SetStatus("All profiles enabled", StatusType.Success);
                 return;
             }
 
-            if (areaId == "disable_all")
+            if (id == "disable_all")
             {
-                foreach (var profile in BlacklistMgr.Profiles.Values)
-                    profile.IsEnabled = false;
+                foreach (var p in BlacklistMgr.Profiles.Values) p.IsEnabled = false;
                 BlacklistMgr.RebuildActiveBlacklist();
                 SetStatus("All profiles disabled", StatusType.Warning);
                 return;
             }
 
-            // Scroll
-            if (areaId == "scroll_up")
+            if (id == "scroll_up") { _scrollOffset = Math.Max(0, _scrollOffset - 1); return; }
+            if (id == "scroll_down")
             {
-                _scrollOffset = Math.Max(0, _scrollOffset - 1);
+                int max = Math.Max(0, BlacklistMgr.Profiles.Count - _maxVisibleItems);
+                _scrollOffset = Math.Min(max, _scrollOffset + 1);
                 return;
             }
 
-            if (areaId == "scroll_down")
+            if (id == "import_input")
             {
-                int maxOffset = Math.Max(0, BlacklistMgr.Profiles.Count - _maxVisibleProfiles);
-                _scrollOffset = Math.Min(maxOffset, _scrollOffset + 1);
-                return;
-            }
-
-            // Import URL paste
-            if (areaId == "import_input")
-            {
-                try
-                {
-                    if (Clipboard.ContainsText())
-                    {
-                        _importUrl = Clipboard.GetText().Trim();
-                        _importStatus = "URL pasted";
-                        _importStatusType = StatusType.Info;
-                    }
-                }
+                try { if (Clipboard.ContainsText()) { _importUrl = Clipboard.GetText().Trim(); _importStatus = "URL pasted"; _importStatusType = StatusType.Info; } }
                 catch { _importStatus = "Clipboard error"; _importStatusType = StatusType.Error; }
                 return;
             }
 
-            // Import button
-            if (areaId == "import_btn" && !_isImporting)
-            {
-                StartImport();
-                return;
-            }
+            if (id == "import_btn" && !_isImporting) { StartImport(); return; }
 
-            // Save
-            if (areaId == "save")
-            {
-                BlacklistMgr.SaveToFile();
-                SetStatus("Saved!", StatusType.Success);
-                return;
-            }
+            if (id == "save") { BlacklistMgr.SaveToFile(); SetStatus("✓ Saved!", StatusType.Success); return; }
 
-            // Export
-            if (areaId == "export")
+            if (id == "export")
             {
-                try
-                {
-                    var data = BlacklistMgr.ExportAllProfiles();
-                    Clipboard.SetText(data);
-                    SetStatus("Exported to clipboard!", StatusType.Success);
-                }
+                try { Clipboard.SetText(BlacklistMgr.ExportAllProfiles()); SetStatus("✓ Exported!", StatusType.Success); }
                 catch { SetStatus("Export failed", StatusType.Error); }
-                return;
-            }
-
-            // Settings toggles
-            if (areaId == "setting_ancient")
-            {
-                SalvageAncient = (SalvageAncient + 1) % 3;
-                return;
-            }
-
-            if (areaId == "setting_primal")
-            {
-                SalvagePrimal = (SalvagePrimal + 1) % 3;
-                return;
-            }
-
-            if (areaId == "setting_repair")
-            {
-                AutoRepair = !AutoRepair;
-                return;
             }
         }
 
@@ -1163,18 +1169,14 @@
         {
             if (string.IsNullOrWhiteSpace(_importUrl))
             {
-                _importStatus = "Please paste a URL first";
+                _importStatus = "Paste a URL first";
                 _importStatusType = StatusType.Warning;
                 return;
             }
 
-            // Check for both Maxroll and Icy Veins
-            bool isMaxroll = _importUrl.Contains("maxroll.gg");
-            bool isIcyVeins = _importUrl.Contains("icy-veins.com");
-
-            if (!isMaxroll && !isIcyVeins)
+            if (!_importUrl.Contains("maxroll.gg") && !_importUrl.Contains("icy-veins.com"))
             {
-                _importStatus = "Unsupported URL (use Maxroll or Icy Veins)";
+                _importStatus = "Unsupported site";
                 _importStatusType = StatusType.Error;
                 return;
             }
@@ -1185,78 +1187,35 @@
 
             try
             {
-                MaxrollBuildData buildData;
-                
-                if (isMaxroll)
+                var data = Crawler.CrawlGuide(_importUrl);
+                if (data?.Items.Count > 0)
                 {
-                    buildData = Crawler.CrawlGuide(_importUrl);
-                }
-                else
-                {
-                    // Use Maxroll crawler for Icy Veins too (similar HTML structure)
-                    buildData = Crawler.CrawlGuide(_importUrl);
-                }
-
-                if (buildData != null && buildData.Items.Count > 0)
-                {
-                    var profile = BlacklistMgr.ImportFromMaxrollData(buildData);
+                    var profile = BlacklistMgr.ImportFromMaxrollData(data);
                     if (profile != null)
                     {
-                        _importStatus = $"✓ Imported '{profile.DisplayName}' ({profile.Items.Count} items)";
+                        _importStatus = $"✓ {profile.DisplayName} ({profile.Items.Count} items)";
                         _importStatusType = StatusType.Success;
                         _importUrl = "";
                         BlacklistMgr.SaveToFile();
                     }
-                    else
-                    {
-                        _importStatus = "Failed to create profile";
-                        _importStatusType = StatusType.Error;
-                    }
+                    else { _importStatus = "Failed to create profile"; _importStatusType = StatusType.Error; }
                 }
-                else
-                {
-                    _importStatus = Crawler.LastError ?? "No items found";
-                    _importStatusType = StatusType.Error;
-                }
+                else { _importStatus = Crawler.LastError ?? "No items found"; _importStatusType = StatusType.Error; }
             }
-            catch (Exception ex)
-            {
-                _importStatus = "Error: " + ex.Message;
-                _importStatusType = StatusType.Error;
-            }
-            finally
-            {
-                _isImporting = false;
-            }
+            catch (Exception ex) { _importStatus = ex.Message; _importStatusType = StatusType.Error; }
+            finally { _isImporting = false; }
         }
 
         #endregion
 
         #region Public API
 
-        public void AddToBlacklist(params string[] itemNames)
-        {
-            BlacklistMgr.AddCustomItems(itemNames);
-        }
-
-        public void RemoveFromBlacklist(params string[] itemNames)
-        {
-            BlacklistMgr.RemoveCustomItems(itemNames);
-        }
-
-        public void SetBuildEnabled(string profileId, bool enabled)
-        {
-            BlacklistMgr.SetProfileEnabled(profileId, enabled);
-        }
+        public void AddToBlacklist(params string[] items) => BlacklistMgr.AddCustomItems(items);
+        public void RemoveFromBlacklist(params string[] items) => BlacklistMgr.RemoveCustomItems(items);
+        public void SetBuildEnabled(string id, bool enabled) => BlacklistMgr.SetProfileEnabled(id, enabled);
 
         #endregion
     }
 
-    public enum StatusType
-    {
-        Info,
-        Success,
-        Warning,
-        Error
-    }
+    public enum StatusType { Info, Success, Warning, Error }
 }
