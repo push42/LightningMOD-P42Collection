@@ -4,8 +4,8 @@
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Customizer for Smart Salvage Plugin
-    /// Configure keybindings, salvage behavior, and custom blacklists
+    /// Customizer for Smart Salvage Plugin v3.0
+    /// Configure keybindings, global rules, and custom blacklists
     /// </summary>
     public class SmartSalvageCustomizer : BasePlugin, ICustomizer
     {
@@ -27,20 +27,70 @@
                 
                 // Key to open/close profile manager (Shift+U)
                 plugin.ManagerKey = Hud.Input.CreateKeyEvent(true, Key.U, false, false, true);
+                
+                // Key to quick toggle all profiles (Ctrl+U)
+                plugin.QuickToggleKey = Hud.Input.CreateKeyEvent(true, Key.U, true, false, false);
 
 
                 // ========================================
-                // SALVAGE BEHAVIOR
+                // GLOBAL RULES - Always Keep
                 // ========================================
                 
-                // Auto repair before salvaging
-                plugin.AutoRepair = true;
+                var rules = plugin.RulesMgr.GlobalRules;
+                
+                // Always keep Primal items (default: true)
+                rules.AlwaysKeepPrimals = true;
+                
+                // Always keep Ancient items (default: false)
+                rules.AlwaysKeepAncients = false;
+                
+                // Always keep Set items (default: false)
+                rules.AlwaysKeepSetItems = false;
+                
+                // Always keep items with high perfection (default: false)
+                rules.AlwaysKeepHighPerfection = false;
+                rules.HighPerfectionThreshold = 95.0;  // 95% or higher
 
-                // Ancient items: 0=smart, 1=never salvage (default), 2=always salvage
-                plugin.SalvageAncient = 1;
 
-                // Primal items: 0=smart, 1=never salvage (default), 2=always salvage
-                plugin.SalvagePrimal = 1;
+                // ========================================
+                // GLOBAL RULES - Protection
+                // ========================================
+                
+                // Protect items with gems socketed (default: true)
+                rules.ProtectSocketedItems = true;
+                
+                // Protect enchanted items (default: true)
+                rules.ProtectEnchantedItems = true;
+                
+                // Protect items in Armory sets (default: true)
+                rules.ProtectArmoryItems = true;
+                
+                // Protect items in locked inventory slots (default: true)
+                rules.ProtectLockedSlots = true;
+
+
+                // ========================================
+                // STAT-BASED RULES
+                // ========================================
+                
+                // Add rules to keep items only if they meet stat requirements
+                // Example: Keep Dawn only if CDR >= 8%
+                /*
+                var dawnRule = new StatRule("Dawn");
+                dawnRule.Conditions.Add(new StatCondition(StatType.CooldownReduction, CompareOp.GreaterOrEqual, 8.0));
+                dawnRule.IsEnabled = true;
+                plugin.RulesMgr.AddRule(dawnRule);
+                */
+                
+                // Example: Keep Convention of Elements only if it has both CHC and CHD
+                /*
+                var coeRule = new StatRule("Convention of Elements");
+                coeRule.Conditions.Add(new StatCondition(StatType.CritChance, CompareOp.GreaterOrEqual, 5.0));
+                coeRule.Conditions.Add(new StatCondition(StatType.CritDamage, CompareOp.GreaterOrEqual, 45.0));
+                coeRule.Logic = RuleLogic.And;  // Both conditions must be met
+                coeRule.IsEnabled = true;
+                plugin.RulesMgr.AddRule(coeRule);
+                */
 
 
                 // ========================================
