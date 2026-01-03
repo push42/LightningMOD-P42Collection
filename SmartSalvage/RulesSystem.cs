@@ -50,42 +50,43 @@
 
         public override string ToString()
         {
-            string opStr = Operator switch
+            string opStr;
+            switch (Operator)
             {
-                CompareOp.GreaterThan => ">",
-                CompareOp.GreaterOrEqual => "≥",
-                CompareOp.LessThan => "<",
-                CompareOp.LessOrEqual => "≤",
-                CompareOp.Equal => "=",
-                _ => "?"
-            };
-            return $"{GetStatDisplayName(Stat)} {opStr} {FormatValue(Stat, Value)}";
+                case CompareOp.GreaterThan: opStr = ">"; break;
+                case CompareOp.GreaterOrEqual: opStr = ">="; break;
+                case CompareOp.LessThan: opStr = "<"; break;
+                case CompareOp.LessOrEqual: opStr = "<="; break;
+                case CompareOp.Equal: opStr = "="; break;
+                default: opStr = "?"; break;
+            }
+            return string.Format("{0} {1} {2}", GetStatDisplayName(Stat), opStr, FormatValue(Stat, Value));
         }
 
         private string GetStatDisplayName(StatType stat)
         {
-            return stat switch
+            switch (stat)
             {
-                StatType.CooldownReduction => "CDR",
-                StatType.ResourceCostReduction => "RCR",
-                StatType.CritChance => "CHC",
-                StatType.CritDamage => "CHD",
-                StatType.AttackSpeed => "IAS",
-                StatType.AreaDamage => "AD",
-                StatType.Strength => "STR",
-                StatType.Dexterity => "DEX",
-                StatType.Intelligence => "INT",
-                StatType.Vitality => "VIT",
-                StatType.AllResist => "AR",
-                StatType.Armor => "Armor",
-                StatType.LifePercent => "Life%",
-                StatType.LifePerHit => "LoH",
-                StatType.LifeRegen => "Regen",
-                StatType.EliteDamage => "Elite%",
-                StatType.SocketCount => "Sockets",
-                StatType.Perfection => "Perf%",
-                _ => stat.ToString()
-            };
+                case StatType.CooldownReduction: return "CDR";
+                case StatType.ResourceCostReduction: return "RCR";
+                case StatType.CritChance: return "CHC";
+                case StatType.CritDamage: return "CHD";
+                case StatType.AttackSpeed: return "IAS";
+                case StatType.AreaDamage: return "AD";
+                case StatType.Strength: return "STR";
+                case StatType.Dexterity: return "DEX";
+                case StatType.Intelligence: return "INT";
+                case StatType.Vitality: return "VIT";
+                case StatType.AllResist: return "AR";
+                case StatType.Armor: return "Armor";
+                case StatType.LifePercent: return "Life%";
+                case StatType.LifePerHit: return "LoH";
+                case StatType.LifeRegen: return "Regen";
+                case StatType.EliteDamage: return "Elite%";
+                case StatType.SocketCount: return "Sockets";
+                case StatType.Perfection: return "Perf%";
+                default: return stat.ToString();
+            }
         }
 
         private string FormatValue(StatType stat, double value)
@@ -97,17 +98,17 @@
                 stat == StatType.LifePercent || stat == StatType.EliteDamage ||
                 stat == StatType.Perfection)
             {
-                return $"{value:F1}%";
+                return string.Format("{0:F1}%", value);
             }
             
             // Integer stats
             if (stat == StatType.SocketCount)
             {
-                return $"{(int)value}";
+                return string.Format("{0}", (int)value);
             }
 
             // Large number stats
-            return value >= 1000 ? $"{value:N0}" : $"{value:F0}";
+            return value >= 1000 ? string.Format("{0:N0}", value) : string.Format("{0:F0}", value);
         }
     }
 
@@ -117,23 +118,40 @@
     public class GlobalRules
     {
         // Always Keep Rules
-        public bool AlwaysKeepPrimals { get; set; } = true;
-        public bool AlwaysKeepAncients { get; set; } = false;
-        public bool AlwaysKeepSetItems { get; set; } = false;
-        public bool AlwaysKeepHighPerfection { get; set; } = false;
-        public double HighPerfectionThreshold { get; set; } = 95.0;
+        public bool AlwaysKeepPrimals { get; set; }
+        public bool AlwaysKeepAncients { get; set; }
+        public bool AlwaysKeepSetItems { get; set; }
+        public bool AlwaysKeepHighPerfection { get; set; }
+        public double HighPerfectionThreshold { get; set; }
 
         // Always Salvage Rules  
-        public bool AlwaysSalvageNonAncient { get; set; } = false;
-        public bool AlwaysSalvageLowPerfection { get; set; } = false;
-        public double LowPerfectionThreshold { get; set; } = 50.0;
-        public bool AlwaysSalvageDuplicates { get; set; } = false;
+        public bool AlwaysSalvageNonAncient { get; set; }
+        public bool AlwaysSalvageLowPerfection { get; set; }
+        public double LowPerfectionThreshold { get; set; }
+        public bool AlwaysSalvageDuplicates { get; set; }
 
         // Protection Rules
-        public bool ProtectSocketedItems { get; set; } = true;
-        public bool ProtectEnchantedItems { get; set; } = true;
-        public bool ProtectArmoryItems { get; set; } = true;
-        public bool ProtectLockedSlots { get; set; } = true;
+        public bool ProtectSocketedItems { get; set; }
+        public bool ProtectEnchantedItems { get; set; }
+        public bool ProtectArmoryItems { get; set; }
+        public bool ProtectLockedSlots { get; set; }
+
+        public GlobalRules()
+        {
+            AlwaysKeepPrimals = true;
+            AlwaysKeepAncients = false;
+            AlwaysKeepSetItems = false;
+            AlwaysKeepHighPerfection = false;
+            HighPerfectionThreshold = 95.0;
+            AlwaysSalvageNonAncient = false;
+            AlwaysSalvageLowPerfection = false;
+            LowPerfectionThreshold = 50.0;
+            AlwaysSalvageDuplicates = false;
+            ProtectSocketedItems = true;
+            ProtectEnchantedItems = true;
+            ProtectArmoryItems = true;
+            ProtectLockedSlots = true;
+        }
     }
 
     /// <summary>
@@ -220,7 +238,7 @@
             };
             StatRules.Add(dawnRule);
 
-            // Example: Primal Jewelry with CHC + CHD
+            // Example: Convention of Elements with CHC + CHD
             var jewelryRule = new StatRule("Convention of Elements")
             {
                 Conditions = new List<StatCondition>

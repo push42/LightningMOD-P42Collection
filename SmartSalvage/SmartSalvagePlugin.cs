@@ -498,15 +498,16 @@
             foreach (var cond in rule.Conditions)
             {
                 double statValue = GetStatValue(item, cond.Stat);
-                bool matches = cond.Operator switch
+                bool matches = false;
+                
+                switch (cond.Operator)
                 {
-                    CompareOp.GreaterThan => statValue > cond.Value,
-                    CompareOp.GreaterOrEqual => statValue >= cond.Value,
-                    CompareOp.LessThan => statValue < cond.Value,
-                    CompareOp.LessOrEqual => statValue <= cond.Value,
-                    CompareOp.Equal => Math.Abs(statValue - cond.Value) < 0.001,
-                    _ => false
-                };
+                    case CompareOp.GreaterThan: matches = statValue > cond.Value; break;
+                    case CompareOp.GreaterOrEqual: matches = statValue >= cond.Value; break;
+                    case CompareOp.LessThan: matches = statValue < cond.Value; break;
+                    case CompareOp.LessOrEqual: matches = statValue <= cond.Value; break;
+                    case CompareOp.Equal: matches = Math.Abs(statValue - cond.Value) < 0.001; break;
+                }
                 results.Add(matches);
             }
 
@@ -522,25 +523,25 @@
                 if (perf?.Attribute == null) continue;
                 string code = perf.Attribute.Code ?? "";
 
-                bool match = stat switch
+                bool match = false;
+                switch (stat)
                 {
-                    StatType.CooldownReduction => code.Contains("Cooldown_Reduction"),
-                    StatType.ResourceCostReduction => code.Contains("Resource_Cost_Reduction"),
-                    StatType.CritChance => code.Contains("Crit_Percent"),
-                    StatType.CritDamage => code.Contains("Crit_Damage"),
-                    StatType.AttackSpeed => code.Contains("Attacks_Per_Second"),
-                    StatType.AreaDamage => code.Contains("Area_Damage"),
-                    StatType.Strength => code == "Strength_Item",
-                    StatType.Dexterity => code == "Dexterity_Item",
-                    StatType.Intelligence => code == "Intelligence_Item",
-                    StatType.Vitality => code == "Vitality_Item",
-                    StatType.AllResist => code == "Resistance_All",
-                    StatType.Armor => code.Contains("Armor"),
-                    StatType.LifePercent => code.Contains("Hitpoints_Max_Percent"),
-                    StatType.LifePerHit => code.Contains("Hitpoints_On_Hit"),
-                    StatType.SocketCount => code == "Sockets",
-                    _ => false
-                };
+                    case StatType.CooldownReduction: match = code.Contains("Cooldown_Reduction"); break;
+                    case StatType.ResourceCostReduction: match = code.Contains("Resource_Cost_Reduction"); break;
+                    case StatType.CritChance: match = code.Contains("Crit_Percent"); break;
+                    case StatType.CritDamage: match = code.Contains("Crit_Damage"); break;
+                    case StatType.AttackSpeed: match = code.Contains("Attacks_Per_Second"); break;
+                    case StatType.AreaDamage: match = code.Contains("Area_Damage"); break;
+                    case StatType.Strength: match = code == "Strength_Item"; break;
+                    case StatType.Dexterity: match = code == "Dexterity_Item"; break;
+                    case StatType.Intelligence: match = code == "Intelligence_Item"; break;
+                    case StatType.Vitality: match = code == "Vitality_Item"; break;
+                    case StatType.AllResist: match = code == "Resistance_All"; break;
+                    case StatType.Armor: match = code.Contains("Armor"); break;
+                    case StatType.LifePercent: match = code.Contains("Hitpoints_Max_Percent"); break;
+                    case StatType.LifePerHit: match = code.Contains("Hitpoints_On_Hit"); break;
+                    case StatType.SocketCount: match = code == "Sockets"; break;
+                }
 
                 if (match)
                 {
@@ -1050,13 +1051,13 @@
 
         private IFont GetStatusFont(StatusType type)
         {
-            return type switch
+            switch (type)
             {
-                StatusType.Success => _fontSuccess,
-                StatusType.Warning => _fontWarning,
-                StatusType.Error => _fontError,
-                _ => _fontAccent
-            };
+                case StatusType.Success: return _fontSuccess;
+                case StatusType.Warning: return _fontWarning;
+                case StatusType.Error: return _fontError;
+                default: return _fontAccent;
+            }
         }
 
         private void SetStatus(string msg, StatusType type)
