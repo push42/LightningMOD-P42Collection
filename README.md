@@ -1,4 +1,4 @@
-# LightningMOD-P42Collection
+ï»¿# LightningMOD-P42Collection
 
 <div align="center">
 
@@ -14,7 +14,7 @@
 
 ---
 
-[Features](#-features) • [Installation](#-installation) • [Plugins](#-plugin-catalog) • [Hotkeys](#-hotkey-reference) • [FAQ](#-faq)
+[Features](#-features) ï¿½ [Installation](#-installation) ï¿½ [Plugins](#-plugin-catalog) ï¿½ [Hotkeys](#-hotkey-reference) ï¿½ [FAQ](#-faq)
 
 </div>
 
@@ -114,7 +114,7 @@ Copy individual plugin folders to `TurboHUD/plugins/Custom/`
 ### ?? Tier 1: Essential Plugins
 
 <details>
-<summary><b>?? Core Framework</b> — The foundation for all plugins</summary>
+<summary><b>?? Core Framework</b> ï¿½ The foundation for all plugins</summary>
 
 #### Overview
 The Core plugin provides a unified framework for all custom plugins with shared UI components, settings persistence, and a modern design system.
@@ -139,7 +139,7 @@ The Core plugin provides a unified framework for all custom plugins with shared 
 </details>
 
 <details>
-<summary><b>?? Auto Pickup Silent</b> — Intelligent item collection</summary>
+<summary><b>?? Auto Pickup Silent</b> ï¿½ Intelligent item collection</summary>
 
 #### Overview
 Aggressive auto-pickup that grabs items efficiently without spamming the pickup action.
@@ -166,7 +166,7 @@ Aggressive auto-pickup that grabs items efficiently without spamming the pickup 
 </details>
 
 <details>
-<summary><b>?? Item Reveal</b> — See item quality before identifying</summary>
+<summary><b>?? Item Reveal</b> ï¿½ See item quality before identifying</summary>
 
 #### Overview
 Reveals Ancient/Primal status and possible stat ranges on unidentified items!
@@ -208,7 +208,7 @@ Dead Man's Legacy
 ### ??? Tier 2: Combat & Safety
 
 <details>
-<summary><b>?? Smart Evade Lite</b> — Human-like danger avoidance (Recommended)</summary>
+<summary><b>?? Smart Evade Lite</b> ï¿½ Human-like danger avoidance (Recommended)</summary>
 
 #### Overview
 A lightweight auto-dodge that helps avoid ground effects with natural, human-like reactions.
@@ -242,7 +242,7 @@ A lightweight auto-dodge that helps avoid ground effects with natural, human-lik
 </details>
 
 <details>
-<summary><b>? Smart Evade (Full)</b> — Advanced protection system</summary>
+<summary><b>? Smart Evade (Full)</b> ï¿½ Advanced protection system</summary>
 
 #### Overview
 Full-featured auto-evade with wall awareness, preemptive dodging, and intelligent pathing.
@@ -265,7 +265,7 @@ Full-featured auto-evade with wall awareness, preemptive dodging, and intelligen
 </details>
 
 <details>
-<summary><b>? Pylon Alert</b> — Never miss a pylon again</summary>
+<summary><b>? Pylon Alert</b> ï¿½ Never miss a pylon again</summary>
 
 #### Overview
 Visual and audio alerts when pylons appear in Greater Rifts.
@@ -288,7 +288,7 @@ Visual and audio alerts when pylons appear in Greater Rifts.
 ### ?? Tier 3: Class Macros
 
 <details>
-<summary><b>?? Wizard Star Pact Macro</b> — Meteor Shower automation</summary>
+<summary><b>?? Wizard Star Pact Macro</b> ï¿½ Meteor Shower automation</summary>
 
 #### Overview
 Automates the complex Star Pact Wizard rotation for Challenge Rifts.
@@ -311,7 +311,7 @@ Automates the complex Star Pact Wizard rotation for Challenge Rifts.
 </details>
 
 <details>
-<summary><b>?? LoD Death Nova Macro</b> — Necromancer automation</summary>
+<summary><b>?? LoD Death Nova Macro</b> ï¿½ Necromancer automation</summary>
 
 #### Overview
 Handles the Death Nova Necromancer rotation efficiently.
@@ -321,7 +321,7 @@ Handles the Death Nova Necromancer rotation efficiently.
 </details>
 
 <details>
-<summary><b>?? Natalya Spike Trap Macro</b> — Demon Hunter automation</summary>
+<summary><b>?? Natalya Spike Trap Macro</b> ï¿½ Demon Hunter automation</summary>
 
 #### Overview
 Automates Natalya's set Spike Trap placement and detonation.
@@ -335,7 +335,7 @@ Automates Natalya's set Spike Trap placement and detonation.
 ### ?? Tier 4: Inventory Management
 
 <details>
-<summary><b>?? Inventory Sorter</b> — Organize your bags instantly</summary>
+<summary><b>?? Inventory Sorter</b> ï¿½ Organize your bags instantly</summary>
 
 #### Overview
 Multiple sorting algorithms to keep your inventory organized.
@@ -359,7 +359,7 @@ Multiple sorting algorithms to keep your inventory organized.
 </details>
 
 <details>
-<summary><b>?? Smart Salvage</b> — Intelligent item recycling</summary>
+<summary><b>?? Smart Salvage</b> ï¿½ Intelligent item recycling</summary>
 
 #### Overview
 Auto-salvage with build protection - never accidentally destroy your needed items!
@@ -388,7 +388,7 @@ Auto-salvage with build protection - never accidentally destroy your needed item
 </details>
 
 <details>
-<summary><b>?? Kadala Auto Buy</b> — Automated gambling</summary>
+<summary><b>?? Kadala Auto Buy</b> ï¿½ Automated gambling</summary>
 
 #### Overview
 Automates Blood Shard spending at Kadala with smart item selection.
@@ -407,7 +407,7 @@ Automates Blood Shard spending at Kadala with smart item selection.
 ### ?? Tier 5: Advanced Automation
 
 <details>
-<summary><b>?? Auto Farm (GR)</b> — Greater Rift automation</summary>
+<summary><b>?? Auto Farm (GR)</b> ï¿½ Greater Rift automation</summary>
 
 #### Overview
 Automated Greater Rift farming with intelligent decision making.
@@ -428,7 +428,7 @@ IDLE ? ENTER_GR ? CLEAR_RIFT ? KILL_RG ? UPGRADE_GEM ? CLOSE_RIFT
 </details>
 
 <details>
-<summary><b>??? Navigation Engine</b> — Advanced pathfinding</summary>
+<summary><b>??? Navigation Engine</b> ï¿½ Advanced pathfinding</summary>
 
 #### Overview
 Sophisticated navigation system with A* pathfinding and spatial awareness.
@@ -446,7 +446,7 @@ Sophisticated navigation system with A* pathfinding and spatial awareness.
 </details>
 
 <details>
-<summary><b>?? Enhanced Navigation</b> — Waypoint system</summary>
+<summary><b>?? Enhanced Navigation</b> ï¿½ Waypoint system</summary>
 
 #### Overview
 Waypoint-based navigation with preset routes.
@@ -460,7 +460,7 @@ Waypoint-based navigation with preset routes.
 ### ?? Tier 6: Utilities
 
 <details>
-<summary><b>?? Custom Plugin Config Panel</b> — Settings UI</summary>
+<summary><b>?? Custom Plugin Config Panel</b> ï¿½ Settings UI</summary>
 
 #### Overview
 In-game configuration panel for all custom plugins.
@@ -470,7 +470,7 @@ In-game configuration panel for all custom plugins.
 </details>
 
 <details>
-<summary><b>?? Auto Master</b> — Legacy automation (Deprecated)</summary>
+<summary><b>?? Auto Master</b> ï¿½ Legacy automation (Deprecated)</summary>
 
 #### Overview
 Legacy auto-pickup system. Replaced by **Auto Pickup Silent**.
