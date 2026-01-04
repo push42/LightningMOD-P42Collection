@@ -1,0 +1,232 @@
+// TEMPLATE: Copy this file and rename to create a new plugin
+// Remove the .template extension after copying
+
+namespace Turbo.Plugins.Custom.YourPluginName
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Drawing;
+    using System.Linq;
+    using SharpDX.DirectInput;
+    using Turbo.Plugins.Custom.Core;
+    using Turbo.Plugins.Default;
+
+    /// <summary>
+    /// Your Plugin Description
+    /// 
+    /// Hotkeys:
+    /// - F4 = Toggle feature
+    /// </summary>
+    public class YourPluginNamePlugin : CustomPluginBase, IInGameTopPainter, IKeyEventHandler, IAfterCollectHandler
+    {
+        #region Plugin Metadata (Required by Core)
+
+        public override string PluginId => "your-plugin-id";
+        public override string PluginName => "Your Plugin Name";
+        public override string PluginDescription => "Short description of what your plugin does";
+        public override string PluginVersion => "1.0.0";
+        public override string PluginCategory => "utility";  // combat, automation, inventory, visual, utility, debug
+        public override string PluginIcon => "?";
+        
+        // Set to true to enable the settings panel in Core Hub
+        public override bool HasSettings => true;
+
+        #endregion
+
+        #region Settings / Configuration
+
+        public IKeyEvent ToggleKey { get; set; }
+        
+        // Your plugin settings
+        public bool FeatureEnabled { get; set; } = true;
+        public int SomeValue { get; set; } = 50;
+        public float SomeFloat { get; set; } = 1.0f;
+
+        #endregion
+
+        #region Private Fields
+
+        private bool _isRunning;
+        // Add your private fields here
+
+        #endregion
+
+        #region Initialization
+
+        public YourPluginNamePlugin()
+        {
+            Enabled = true;
+            Order = 10000;  // Adjust as needed
+        }
+
+        public override void Load(IController hud)
+        {
+            base.Load(hud);  // IMPORTANT: Always call base.Load first!
+
+            // Setup hotkeys
+            ToggleKey = Hud.Input.CreateKeyEvent(true, Key.F4, false, false, false);
+
+            // Initialize your plugin
+            Log("Plugin initialized");
+        }
+
+        #endregion
+
+        #region Settings Panel (Optional but recommended)
+
+        public override void DrawSettings(IController hud, RectangleF rect, 
+            Dictionary<string, RectangleF> clickAreas, int scrollOffset)
+        {
+            float x = rect.X, y = rect.Y, w = rect.Width;
+
+            // Section: General
+            y += DrawSettingsHeader(x, y, "General Settings");
+            y += 8;
+
+            // Toggle setting example
+            y += DrawToggleSetting(x, y, w, "Feature Enabled", FeatureEnabled, 
+                clickAreas, "toggle_feature");
+
+            // Selector setting example
+            y += DrawSelectorSetting(x, y, w, "Some Value", SomeValue.ToString(), 
+                clickAreas, "sel_value");
+
+            y += 12;
+            DrawSettingsSeparator(x, y, w);
+            y += 12;
+
+            // Section: Advanced
+            y += DrawSettingsHeader(x, y, "Advanced Settings");
+            y += 8;
+
+            y += DrawSelectorSetting(x, y, w, "Float Value", SomeFloat.ToString("F1"), 
+                clickAreas, "sel_float");
+
+            y += 16;
+
+            // Hint at bottom
+            y += DrawSettingsHint(x, y, "Press F4 to toggle the plugin");
+
+            // Button example
+            float btnW = 100, btnH = 26;
+            var resetRect = new RectangleF(x + w - btnW, y + 10, btnW, btnH);
+            DrawSettingsButton(resetRect, "Reset", clickAreas, "btn_reset");
+        }
+
+        public override void HandleSettingsClick(string clickId)
+        {
+            switch (clickId)
+            {
+                case "toggle_feature":
+                    FeatureEnabled = !FeatureEnabled;
+                    break;
+                case "sel_value_prev":
+                    SomeValue = Math.Max(0, SomeValue - 5);
+                    break;
+                case "sel_value_next":
+                    SomeValue = Math.Min(100, SomeValue + 5);
+                    break;
+                case "sel_float_prev":
+                    SomeFloat = Math.Max(0, SomeFloat - 0.1f);
+                    break;
+                case "sel_float_next":
+                    SomeFloat = Math.Min(10, SomeFloat + 0.1f);
+                    break;
+                case "btn_reset":
+                    FeatureEnabled = true;
+                    SomeValue = 50;
+                    SomeFloat = 1.0f;
+                    SetCoreStatus("Settings reset", StatusType.Info);
+                    break;
+            }
+
+            // Save after any change
+            SavePluginSettings();
+        }
+
+        // Settings persistence
+        protected override object GetSettingsObject() => new MyPluginSettings
+        {
+            FeatureEnabled = this.FeatureEnabled,
+            SomeValue = this.SomeValue,
+            SomeFloat = this.SomeFloat
+        };
+
+        protected override void ApplySettingsObject(object settings)
+        {
+            if (settings is MyPluginSettings s)
+            {
+                FeatureEnabled = s.FeatureEnabled;
+                SomeValue = s.SomeValue;
+                SomeFloat = s.SomeFloat;
+            }
+        }
+
+        // Settings class
+        private class MyPluginSettings : PluginSettingsBase
+        {
+            public bool FeatureEnabled { get; set; }
+            public int SomeValue { get; set; }
+            public float SomeFloat { get; set; }
+        }
+
+        #endregion
+
+        #region Key Handler
+
+        public void OnKeyEvent(IKeyEvent keyEvent)
+        {
+            if (!Hud.Game.IsInGame) return;
+            if (!Enabled) return;  // Respect Core enable/disable
+
+            if (ToggleKey.Matches(keyEvent) && keyEvent.IsPressed)
+            {
+                _isRunning = !_isRunning;
+                SetCoreStatus(_isRunning ? "Started" : "Stopped", 
+                    _isRunning ? StatusType.Success : StatusType.Warning);
+            }
+        }
+
+        #endregion
+
+        #region Main Logic
+
+        public void AfterCollect()
+        {
+            if (!Hud.Game.IsInGame) return;
+            if (!Enabled) return;  // Respect Core enable/disable
+            if (!_isRunning) return;
+
+            // Your main logic here
+            // This runs every frame after data collection
+        }
+
+        #endregion
+
+        #region Rendering
+
+        public void PaintTopInGame(ClipState clipState)
+        {
+            if (clipState != ClipState.BeforeClip) return;
+            if (!Hud.Game.IsInGame) return;
+            if (!Enabled) return;  // Respect Core enable/disable
+
+            // Your rendering code here
+            
+            // Example: Draw a small status panel
+            if (_isRunning)
+            {
+                float x = 10, y = 50;
+                
+                // Use Core's design system if available
+                if (HasCore)
+                {
+                    UIComponents.DrawPanel(x, y, 150, 40);
+                    UIComponents.DrawText(x + 10, y + 10, $"{PluginIcon} {PluginName}");
+                }
+            }
+        }
+
+        #endregion
+    }
+}

@@ -7,10 +7,13 @@
     using System.Linq;
     using System.Windows.Forms;
     using SharpDX.DirectInput;
+    using Turbo.Plugins.Custom.Core;
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Advanced Inventory/Stash Sorter Plugin with In-Game Configuration
+    /// Advanced Inventory/Stash Sorter Plugin - Core Integrated v2.0
+    /// 
+    /// Now integrated with the Core Plugin Framework!
     /// 
     /// Features:
     /// - Preset-based stash organization (Speed Farmer, Collector, etc.)
@@ -25,8 +28,20 @@
     /// - Ctrl+K = Open configuration panel
     /// - ESC = Cancel sorting
     /// </summary>
-    public class InventorySorterPlugin : BasePlugin, IKeyEventHandler, IInGameTopPainter, IAfterCollectHandler
+    public class InventorySorterPlugin : CustomPluginBase, IKeyEventHandler, IInGameTopPainter, IAfterCollectHandler
     {
+        #region Plugin Metadata
+
+        public override string PluginId => "inventory-sorter";
+        public override string PluginName => "Inventory Sorter";
+        public override string PluginDescription => "Smart inventory and stash organization";
+        public override string PluginVersion => "2.0.0";
+        public override string PluginCategory => "inventory";
+        public override string PluginIcon => "📦";
+        public override bool HasSettings => true;
+
+        #endregion
+
         #region Public Properties
 
         public SorterConfiguration Config { get; private set; }
@@ -37,10 +52,10 @@
         public IKeyEvent CancelKey { get; set; }
         
         public SortMode CurrentMode { get { return _currentMode; } }
-
-        // Panel positioning (percentage of screen)
+        // UI settings - DISABLED by default, Core sidebar shows status
         public float PanelX { get; set; } = 0.005f;
         public float PanelY { get; set; } = 0.56f;
+        private bool _showPanel = false; // Disabled - use Core sidebar
 
         #endregion
 
@@ -53,12 +68,14 @@
         // Advanced UI
         private SorterConfigUI _configUI;
         
-        // UI - Unified styling
+        // Fallback fonts
         private IFont _titleFont;
         private IFont _statusFont;
         private IFont _infoFont;
         private IFont _smallFont;
         private IFont _progressFont;
+        
+        // Brushes
         private IBrush _panelBrush;
         private IBrush _borderBrush;
         private IBrush _accentBrush;
@@ -101,18 +118,18 @@
 
             // Key bindings
             SortKey = Hud.Input.CreateKeyEvent(true, Key.K, false, false, false);
-            ModeKey = Hud.Input.CreateKeyEvent(true, Key.K, false, false, true);      // Shift+K
-            ConfigKey = Hud.Input.CreateKeyEvent(true, Key.K, true, false, false);    // Ctrl+K
+            ModeKey = Hud.Input.CreateKeyEvent(true, Key.K, false, false, true);
+            ConfigKey = Hud.Input.CreateKeyEvent(true, Key.K, true, false, false);
             CancelKey = Hud.Input.CreateKeyEvent(true, Key.Escape, false, false, false);
 
-            // Initialize fonts
+            // Fallback fonts
             _titleFont = Hud.Render.CreateFont("tahoma", 8, 255, 220, 180, 100, true, false, 180, 0, 0, 0, true);
             _statusFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 255, 255, 255, true, false, 160, 0, 0, 0, true);
             _infoFont = Hud.Render.CreateFont("tahoma", 7, 200, 180, 180, 180, false, false, 140, 0, 0, 0, true);
             _smallFont = Hud.Render.CreateFont("tahoma", 6.5f, 200, 150, 150, 150, false, false, 120, 0, 0, 0, true);
             _progressFont = Hud.Render.CreateFont("tahoma", 7, 255, 100, 255, 100, true, false, 150, 0, 0, 0, true);
             
-            // Initialize brushes
+            // Brushes
             _panelBrush = Hud.Render.CreateBrush(235, 15, 15, 25, 0);
             _borderBrush = Hud.Render.CreateBrush(200, 60, 60, 80, 1f);
             _accentBrush = Hud.Render.CreateBrush(255, 220, 180, 100, 0);
@@ -122,13 +139,139 @@
             _progressBgBrush = Hud.Render.CreateBrush(200, 30, 30, 45, 0);
             _progressFillBrush = Hud.Render.CreateBrush(255, 80, 180, 100, 0);
 
-            // Stash element
             _stashElement = Hud.Inventory.StashMainUiElement;
             _statusTimer = Hud.Time.CreateWatch();
 
             // Config UI
             _configUI = new SorterConfigUI(Hud, this);
             _configUI.SetReferences(PresetMgr, Config);
+
+            Log("Inventory Sorter loaded");
+        }
+
+        #endregion
+
+        #region Settings Panel
+
+        public override void DrawSettings(IController hud, RectangleF rect, Dictionary<string, RectangleF> clickAreas, int scrollOffset)
+        {
+            float x = rect.X, y = rect.Y, w = rect.Width;
+
+            // Status
+            string statusText = _isRunning ? "● SORTING" : "○ READY";
+            var statusFont = _isRunning ? (HasCore ? Core.FontSuccess : _progressFont) : (HasCore ? Core.FontBody : _infoFont);
+            var statusLayout = statusFont.GetTextLayout(statusText);
+            statusFont.DrawText(statusLayout, x, y);
+            y += statusLayout.Metrics.Height + 10;
+
+            // Mode section
+            y += DrawSettingsHeader(x, y, "Sort Mode");
+            y += 8;
+
+            y += DrawSelectorSetting(x, y, w, "Mode", GetModeName(_currentMode), clickAreas, "sel_mode");
+
+            y += 12;
+
+            // Protection section
+            y += DrawSettingsHeader(x, y, "Protection");
+            y += 8;
+
+            y += DrawToggleSetting(x, y, w, "Respect Inventory Lock", Config.RespectInventoryLock, clickAreas, "toggle_invlock");
+            y += DrawToggleSetting(x, y, w, "Protect Armory Items", Config.ProtectArmoryItems, clickAreas, "toggle_armory");
+            y += DrawToggleSetting(x, y, w, "Protect Enchanted", Config.ProtectEnchantedItems, clickAreas, "toggle_enchanted");
+            y += DrawToggleSetting(x, y, w, "Protect Socketed", Config.ProtectSocketedItems, clickAreas, "toggle_socketed");
+
+            y += 12;
+
+            // Sorting Options
+            y += DrawSettingsHeader(x, y, "Sort Options");
+            y += 8;
+
+            y += DrawToggleSetting(x, y, w, "Primals First", Config.PrimalsFirst, clickAreas, "toggle_primals");
+            y += DrawToggleSetting(x, y, w, "Group Sets", Config.GroupSets, clickAreas, "toggle_sets");
+            y += DrawToggleSetting(x, y, w, "Group Gems by Color", Config.GroupGemsByColor, clickAreas, "toggle_gems");
+            y += DrawToggleSetting(x, y, w, "Show Highlights", Config.ShowHighlights, clickAreas, "toggle_highlights");
+
+            y += 16;
+            y += DrawSettingsHint(x, y, "[K] Sort • [⇧K] Mode • [^K] Config");
+        }
+
+        public override void HandleSettingsClick(string clickId)
+        {
+            switch (clickId)
+            {
+                case "sel_mode_prev":
+                case "sel_mode_next":
+                    CycleMode();
+                    break;
+                case "toggle_invlock":
+                    Config.RespectInventoryLock = !Config.RespectInventoryLock;
+                    break;
+                case "toggle_armory":
+                    Config.ProtectArmoryItems = !Config.ProtectArmoryItems;
+                    break;
+                case "toggle_enchanted":
+                    Config.ProtectEnchantedItems = !Config.ProtectEnchantedItems;
+                    break;
+                case "toggle_socketed":
+                    Config.ProtectSocketedItems = !Config.ProtectSocketedItems;
+                    break;
+                case "toggle_primals":
+                    Config.PrimalsFirst = !Config.PrimalsFirst;
+                    break;
+                case "toggle_sets":
+                    Config.GroupSets = !Config.GroupSets;
+                    break;
+                case "toggle_gems":
+                    Config.GroupGemsByColor = !Config.GroupGemsByColor;
+                    break;
+                case "toggle_highlights":
+                    Config.ShowHighlights = !Config.ShowHighlights;
+                    break;
+            }
+            SavePluginSettings();
+        }
+
+        protected override object GetSettingsObject() => new SorterSettings
+        {
+            CurrentMode = (int)_currentMode,
+            RespectInventoryLock = Config.RespectInventoryLock,
+            ProtectArmoryItems = Config.ProtectArmoryItems,
+            ProtectEnchantedItems = Config.ProtectEnchantedItems,
+            ProtectSocketedItems = Config.ProtectSocketedItems,
+            PrimalsFirst = Config.PrimalsFirst,
+            GroupSets = Config.GroupSets,
+            GroupGemsByColor = Config.GroupGemsByColor,
+            ShowHighlights = Config.ShowHighlights
+        };
+
+        protected override void ApplySettingsObject(object settings)
+        {
+            if (settings is SorterSettings s)
+            {
+                _currentMode = (SortMode)s.CurrentMode;
+                Config.RespectInventoryLock = s.RespectInventoryLock;
+                Config.ProtectArmoryItems = s.ProtectArmoryItems;
+                Config.ProtectEnchantedItems = s.ProtectEnchantedItems;
+                Config.ProtectSocketedItems = s.ProtectSocketedItems;
+                Config.PrimalsFirst = s.PrimalsFirst;
+                Config.GroupSets = s.GroupSets;
+                Config.GroupGemsByColor = s.GroupGemsByColor;
+                Config.ShowHighlights = s.ShowHighlights;
+            }
+        }
+
+        private class SorterSettings : PluginSettingsBase
+        {
+            public int CurrentMode { get; set; }
+            public bool RespectInventoryLock { get; set; }
+            public bool ProtectArmoryItems { get; set; }
+            public bool ProtectEnchantedItems { get; set; }
+            public bool ProtectSocketedItems { get; set; }
+            public bool PrimalsFirst { get; set; }
+            public bool GroupSets { get; set; }
+            public bool GroupGemsByColor { get; set; }
+            public bool ShowHighlights { get; set; }
         }
 
         #endregion
@@ -140,6 +283,7 @@
             _currentMode = mode;
             _statusText = "Mode: " + GetModeName(mode);
             _statusTimer.Restart();
+            SetCoreStatus($"Sort mode: {GetModeName(mode)}", StatusType.Info);
         }
 
         #endregion
@@ -149,26 +293,23 @@
         public void OnKeyEvent(IKeyEvent keyEvent)
         {
             if (!Hud.Game.IsInGame) return;
+            if (!Enabled) return;
             if (!IsInventoryOpen()) return;
 
-            // Ctrl+K = Toggle config panel
             if (ConfigKey.Matches(keyEvent) && keyEvent.IsPressed)
             {
                 _configUI.IsVisible = !_configUI.IsVisible;
                 return;
             }
 
-            // If config is visible and handles input, don't process other keys
             if (_configUI.IsVisible && _configUI.IsMouseOverUI) return;
 
-            // Shift+K = Cycle mode
             if (ModeKey.Matches(keyEvent) && keyEvent.IsPressed)
             {
                 CycleMode();
                 return;
             }
 
-            // K = Sort or Cancel
             if (SortKey.Matches(keyEvent) && keyEvent.IsPressed)
             {
                 if (_isRunning)
@@ -183,7 +324,6 @@
                 return;
             }
 
-            // ESC = Cancel
             if (CancelKey.Matches(keyEvent) && keyEvent.IsPressed)
             {
                 if (_isRunning)
@@ -205,19 +345,15 @@
         public void AfterCollect()
         {
             if (!Hud.Game.IsInGame) return;
+            if (!Enabled) return;
 
-            // Handle config UI mouse input
             if (_configUI.IsVisible && IsInventoryOpen())
-            {
                 _configUI.HandleMouseInput();
-            }
 
             if (!_isRunning) return;
 
             if (_shouldCancel || !IsInventoryOpen() || !Hud.Window.IsForeground)
-            {
                 StopSort();
-            }
         }
 
         #endregion
@@ -249,19 +385,15 @@
                 var sorted = SortItemList(items);
                 List<MoveOp> moves;
 
-                // Use row-locked placement for RowLocked mode
                 if (_currentMode == SortMode.RowLocked)
-                {
                     moves = PlanRowLockedMoves(sorted, isStash);
-                }
                 else
-                {
                     moves = PlanMoves(sorted, isStash);
-                }
                 
                 if (moves.Count == 0)
                 {
                     _statusText = "Already sorted!";
+                    SetCoreStatus("Already sorted!", StatusType.Success);
                     _isRunning = false;
                     return;
                 }
@@ -272,8 +404,7 @@
 
                 foreach (var move in moves)
                 {
-                    if (_shouldCancel || !IsInventoryOpen())
-                        break;
+                    if (_shouldCancel || !IsInventoryOpen()) break;
 
                     ExecuteMove(move, isStash);
                     _sortedCount++;
@@ -285,10 +416,12 @@
 
                 Hud.Interaction.MouseMove(cursorX, cursorY, 1, 1);
                 _statusText = _shouldCancel ? "Cancelled" : string.Format("Done! ({0} items)", _sortedCount);
+                SetCoreStatus(_statusText, _shouldCancel ? StatusType.Warning : StatusType.Success);
             }
             catch (Exception)
             {
                 _statusText = "Error!";
+                SetCoreStatus("Sort error", StatusType.Error);
             }
             finally
             {
@@ -311,6 +444,7 @@
             _currentMode = modes[(idx + 1) % modes.Length];
             _statusText = "Mode: " + GetModeName(_currentMode);
             _statusTimer.Restart();
+            SetCoreStatus($"Mode: {GetModeName(_currentMode)}", StatusType.Info);
         }
 
         private List<SortItem> CollectItems(bool isStash)
@@ -324,7 +458,6 @@
                 int page = Hud.Inventory.SelectedStashPageIndex;
                 int tab = Hud.Inventory.SelectedStashTabIndex;
                 gridStartY = (page * Hud.Inventory.MaxStashTabCountPerPage + tab) * 10;
-                
                 items = Hud.Inventory.ItemsInStash.Where(i => 
                     i.InventoryY >= gridStartY && i.InventoryY < gridStartY + 10);
             }
@@ -338,60 +471,41 @@
                 if (item == null || item.SnoItem == null) continue;
                 if (IsProtected(item)) continue;
 
-                var si = new SortItem();
-                si.Item = item;
-                si.UniqueId = item.ItemUniqueId;
-                si.X = item.InventoryX;
-                si.Y = isStash ? item.InventoryY - gridStartY : item.InventoryY;
-                si.Width = item.SnoItem.ItemWidth;
-                si.Height = item.SnoItem.ItemHeight;
-                si.Category = GetCategory(item);
-                si.SubCategory = GetSubCategory(item);
-                si.Quality = GetQuality(item);
-                si.Name = item.SnoItem.NameLocalized ?? "";
-                si.SetSno = item.SetSno;
-                si.GemType = GetGemType(item);
-                si.GemRank = GetGemRank(item);
-                si.RowGroup = GetRowGroup(item); // For row-locked sorting
-                
+                var si = new SortItem
+                {
+                    Item = item,
+                    UniqueId = item.ItemUniqueId,
+                    X = item.InventoryX,
+                    Y = isStash ? item.InventoryY - gridStartY : item.InventoryY,
+                    Width = item.SnoItem.ItemWidth,
+                    Height = item.SnoItem.ItemHeight,
+                    Category = GetCategory(item),
+                    SubCategory = GetSubCategory(item),
+                    Quality = GetQuality(item),
+                    Name = item.SnoItem.NameLocalized ?? "",
+                    SetSno = item.SetSno,
+                    GemType = GetGemType(item),
+                    GemRank = GetGemRank(item),
+                    RowGroup = GetRowGroup(item)
+                };
                 result.Add(si);
             }
 
             return result;
         }
 
-        /// <summary>
-        /// Get the row group for an item (used in RowLocked mode)
-        /// Items in the same row group will be placed together in rows
-        /// </summary>
         private int GetRowGroup(IItem item)
         {
             var sno = item.SnoItem;
             if (sno == null) return 999;
 
-            // Legendary gems - group 0 (top priority)
             if (sno.MainGroupCode == "gems_unique") return 0;
-
-            // Regular gems - group by color (1-6)
-            if (sno.Kind == ItemKind.gem)
-            {
-                return GetGemType(item); // 1=Amethyst, 2=Diamond, 3=Emerald, 4=Ruby, 5=Topaz
-            }
-
-            // Crafting materials - group 10
+            if (sno.Kind == ItemKind.gem) return GetGemType(item);
             if (sno.Kind == ItemKind.craft) return 10;
-
-            // Equipment by ancient rank
-            if (item.AncientRank == 2) return 20; // Primals
-            if (item.AncientRank == 1) return 30; // Ancients
-
-            // Set items
+            if (item.AncientRank == 2) return 20;
+            if (item.AncientRank == 1) return 30;
             if (item.SetSno != 0) return 40;
-
-            // Legendaries
             if (item.IsLegendary) return 50;
-
-            // Other
             return 100;
         }
 
@@ -403,75 +517,44 @@
             {
                 case SortMode.ByCategory:
                     if (Config.PrimalsFirst)
-                    {
-                        query = items.OrderByDescending(i => i.Item.AncientRank == 2 ? 1 : 0)
-                                     .ThenBy(i => (int)i.Category);
-                    }
+                        query = items.OrderByDescending(i => i.Item.AncientRank == 2 ? 1 : 0).ThenBy(i => (int)i.Category);
                     else
-                    {
                         query = items.OrderBy(i => (int)i.Category);
-                    }
 
                     if (Config.GroupSets)
                         query = query.ThenBy(i => i.SetSno == 0 ? 1 : 0).ThenBy(i => i.SetSno);
-
                     if (Config.GroupGemsByColor)
                         query = query.ThenBy(i => i.GemType);
 
-                    return query.ThenByDescending(i => i.GemRank)
-                                .ThenByDescending(i => i.Quality)
-                                .ThenBy(i => i.Name)
-                                .ToList();
+                    return query.ThenByDescending(i => i.GemRank).ThenByDescending(i => i.Quality).ThenBy(i => i.Name).ToList();
 
                 case SortMode.ByQuality:
-                    return items.OrderByDescending(i => i.Quality)
-                                .ThenByDescending(i => i.GemRank)
-                                .ThenBy(i => i.Name)
-                                .ToList();
+                    return items.OrderByDescending(i => i.Quality).ThenByDescending(i => i.GemRank).ThenBy(i => i.Name).ToList();
 
                 case SortMode.ByType:
-                    return items.OrderBy(i => GetSlotOrder(i.Item))
-                                .ThenBy(i => i.SetSno)
-                                .ThenByDescending(i => i.Quality)
-                                .ThenBy(i => i.Name)
-                                .ToList();
+                    return items.OrderBy(i => GetSlotOrder(i.Item)).ThenBy(i => i.SetSno).ThenByDescending(i => i.Quality).ThenBy(i => i.Name).ToList();
 
                 case SortMode.BySize:
-                    return items.OrderByDescending(i => i.Width * i.Height)
-                                .ThenByDescending(i => i.Quality)
-                                .ThenBy(i => i.Name)
-                                .ToList();
+                    return items.OrderByDescending(i => i.Width * i.Height).ThenByDescending(i => i.Quality).ThenBy(i => i.Name).ToList();
 
                 case SortMode.Alphabetical:
-                    return items.OrderBy(i => i.Name)
-                                .ThenByDescending(i => i.Quality)
-                                .ToList();
+                    return items.OrderBy(i => i.Name).ThenByDescending(i => i.Quality).ToList();
 
                 case SortMode.RowLocked:
-                    // Sort by row group first, then by rank/quality within group
-                    return items.OrderBy(i => i.RowGroup)
-                                .ThenByDescending(i => i.GemRank)
-                                .ThenByDescending(i => i.Quality)
-                                .ThenBy(i => i.Name)
-                                .ToList();
+                    return items.OrderBy(i => i.RowGroup).ThenByDescending(i => i.GemRank).ThenByDescending(i => i.Quality).ThenBy(i => i.Name).ToList();
 
                 default:
                     return items;
             }
         }
 
-        /// <summary>
-        /// Plan moves for row-locked sorting where each category gets its own row(s)
-        /// </summary>
         private List<MoveOp> PlanRowLockedMoves(List<SortItem> sortedItems, bool isStash)
         {
             var moves = new List<MoveOp>();
             int gridW = isStash ? 7 : 10;
             int gridH = isStash ? 10 : 6;
-            
             bool[,] grid = new bool[gridW, gridH];
 
-            // Respect inventory lock
             if (!isStash && Config.RespectInventoryLock)
             {
                 var lockArea = Hud.Inventory.InventoryLockArea;
@@ -480,40 +563,27 @@
                         if (x >= 0 && y >= 0) grid[x, y] = true;
             }
 
-            // Group items by their row group
             var groupedItems = sortedItems.GroupBy(i => i.RowGroup).OrderBy(g => g.Key).ToList();
-
-            int currentRow = 0;
-            int currentX = 0;
+            int currentRow = 0, currentX = 0;
 
             foreach (var group in groupedItems)
             {
                 var itemsInGroup = group.OrderByDescending(i => i.GemRank).ThenByDescending(i => i.Quality).ToList();
                 
-                // Start each new group on a new row (unless it's the first group and row 0)
-                if (currentX > 0)
-                {
-                    currentRow++;
-                    currentX = 0;
-                }
+                if (currentX > 0) { currentRow++; currentX = 0; }
 
                 foreach (var item in itemsInGroup)
                 {
-                    if (currentRow >= gridH) break; // Out of space
-
-                    // Find position in current row
+                    if (currentRow >= gridH) break;
                     bool placed = false;
                     
-                    // Try to place in current row
                     while (currentX <= gridW - item.Width)
                     {
                         if (CanPlace(grid, currentX, currentRow, item.Width, item.Height))
                         {
-                            // Place item
                             for (int dx = 0; dx < item.Width; dx++)
                                 for (int dy = 0; dy < item.Height; dy++)
-                                    if (currentRow + dy < gridH)
-                                        grid[currentX + dx, currentRow + dy] = true;
+                                    if (currentRow + dy < gridH) grid[currentX + dx, currentRow + dy] = true;
 
                             if (item.X != currentX || item.Y != currentRow)
                                 moves.Add(new MoveOp { Item = item, TargetX = currentX, TargetY = currentRow });
@@ -525,21 +595,17 @@
                         currentX++;
                     }
 
-                    // If couldn't place in current row, move to next row
                     if (!placed)
                     {
                         currentRow++;
                         currentX = 0;
-
                         if (currentRow >= gridH) break;
 
-                        // Try again in new row
                         if (CanPlace(grid, currentX, currentRow, item.Width, item.Height))
                         {
                             for (int dx = 0; dx < item.Width; dx++)
                                 for (int dy = 0; dy < item.Height; dy++)
-                                    if (currentRow + dy < gridH)
-                                        grid[currentX + dx, currentRow + dy] = true;
+                                    if (currentRow + dy < gridH) grid[currentX + dx, currentRow + dy] = true;
 
                             if (item.X != currentX || item.Y != currentRow)
                                 moves.Add(new MoveOp { Item = item, TargetX = currentX, TargetY = currentRow });
@@ -558,7 +624,6 @@
             var moves = new List<MoveOp>();
             int gridW = isStash ? 7 : 10;
             int gridH = isStash ? 10 : 6;
-            
             bool[,] grid = new bool[gridW, gridH];
 
             if (!isStash && Config.RespectInventoryLock)
@@ -639,11 +704,8 @@
 
         private bool CanPlace(bool[,] grid, int x, int y, int w, int h)
         {
-            int gridW = grid.GetLength(0);
-            int gridH = grid.GetLength(1);
-            
+            int gridW = grid.GetLength(0), gridH = grid.GetLength(1);
             if (x + w > gridW || y + h > gridH) return false;
-            
             for (int dx = 0; dx < w; dx++)
                 for (int dy = 0; dy < h; dy++)
                     if (grid[x + dx, y + dy]) return false;
@@ -659,84 +721,60 @@
 
         #region UI Painting
 
-        public void PaintTopInGame(ClipState clipState)
+        public override void PaintTopInGame(ClipState clipState)
         {
+            // Call base for Core registration
+            base.PaintTopInGame(clipState);
+            
             if (clipState != ClipState.BeforeClip) return;
-            if (!Hud.Game.IsInGame) return;
+            if (!Hud.Game.IsInGame || !Enabled) return;
 
-            // Draw main control panel
             DrawPanel();
 
-            // Draw config UI if visible
             if (_configUI.IsVisible && IsInventoryOpen())
             {
                 var invRect = Hud.Inventory.InventoryMainUiElement.Rectangle;
                 _configUI.Render(invRect);
             }
 
-            // Draw item highlights
             if (Config.ShowHighlights && IsInventoryOpen())
-            {
                 DrawItemHighlights();
-            }
         }
 
         private void DrawPanel()
         {
+            // Panel disabled by default - Core sidebar shows status
+            if (!_showPanel && !_isRunning) return;
+            
+            // Only show when sorting is active
+            if (!_isRunning) return;
+            
             float x = Hud.Window.Size.Width * PanelX;
             float y = Hud.Window.Size.Height * PanelY;
-            float w = 150;
-            float h = _isRunning ? 72 : 60;
-            float pad = 6;
+            float w = 150, h = 72, pad = 6;
 
-            // Panel background
             _panelBrush.DrawRectangle(x, y, w, h);
             _borderBrush.DrawRectangle(x, y, w, h);
 
-            // Accent bar
-            var accentBrush = _isRunning ? _accentBrush : _accentOffBrush;
+            var accentBrush = _accentBrush;
             accentBrush.DrawRectangle(x, y, 3, h);
 
-            float tx = x + pad + 3;
-            float ty = y + pad;
-            float contentW = w - pad * 2 - 3;
+            float tx = x + pad + 3, ty = y + pad, contentW = w - pad * 2 - 3;
 
-            // Title
-            var title = _titleFont.GetTextLayout("Inventory Sort");
-            _titleFont.DrawText(title, tx, ty);
+            var titleFont = HasCore ? Core.FontTitle : _titleFont;
+            var title = titleFont.GetTextLayout("📦 Sorting...");
+            titleFont.DrawText(title, tx, ty);
             ty += title.Metrics.Height + 2;
 
-            // Mode
-            string modeStr = "Mode: " + GetModeName(_currentMode);
-            var modeLayout = _statusFont.GetTextLayout(modeStr);
-            _statusFont.DrawText(modeLayout, tx, ty);
-            ty += modeLayout.Metrics.Height + 2;
+            // Progress bar
+            float progressW = contentW, progressH = 6;
+            _progressBgBrush.DrawRectangle(tx, ty, progressW, progressH);
+            float pct = _totalToSort > 0 ? (float)_sortedCount / _totalToSort : 0;
+            _progressFillBrush.DrawRectangle(tx, ty, progressW * pct, progressH);
+            ty += progressH + 3;
 
-            // Status or hints
-            if (_isRunning)
-            {
-                // Progress bar
-                float progressW = contentW;
-                float progressH = 6;
-                _progressBgBrush.DrawRectangle(tx, ty, progressW, progressH);
-                
-                float pct = _totalToSort > 0 ? (float)_sortedCount / _totalToSort : 0;
-                _progressFillBrush.DrawRectangle(tx, ty, progressW * pct, progressH);
-                ty += progressH + 3;
-
-                var sLayout = _progressFont.GetTextLayout(_statusText);
-                _progressFont.DrawText(sLayout, tx, ty);
-            }
-            else if (_statusTimer.IsRunning && _statusTimer.ElapsedMilliseconds < 2500 && !string.IsNullOrEmpty(_statusText))
-            {
-                var sLayout = _infoFont.GetTextLayout(_statusText);
-                _infoFont.DrawText(sLayout, tx, ty);
-            }
-            else
-            {
-                var hint = _smallFont.GetTextLayout("[K] Sort [⇧K] Mode [^K] Config");
-                _smallFont.DrawText(hint, tx, ty);
-            }
+            var sLayout = _progressFont.GetTextLayout(_statusText);
+            _progressFont.DrawText(sLayout, tx, ty);
         }
 
         private void DrawItemHighlights()
@@ -748,30 +786,21 @@
             foreach (var item in isStash ? Hud.Inventory.ItemsInStash : Hud.Inventory.ItemsInInventory)
             {
                 if (item == null) continue;
-
                 var rect = Hud.Inventory.GetItemRect(item);
                 if (rect == RectangleF.Empty) continue;
 
-                // Only highlight items in current tab for stash
                 if (isStash)
                 {
                     int page = Hud.Inventory.SelectedStashPageIndex;
                     int tab = Hud.Inventory.SelectedStashTabIndex;
                     int gridStartY = (page * Hud.Inventory.MaxStashTabCountPerPage + tab) * 10;
-                    if (item.InventoryY < gridStartY || item.InventoryY >= gridStartY + 10)
-                        continue;
+                    if (item.InventoryY < gridStartY || item.InventoryY >= gridStartY + 10) continue;
                 }
 
                 if (sortableIds.Contains(item.ItemUniqueId))
-                {
-                    // Will be sorted - green highlight
                     _highlightBrush.DrawRectangle(rect);
-                }
                 else if (IsProtected(item))
-                {
-                    // Protected - gold highlight
                     _protectedBrush.DrawRectangle(rect);
-                }
             }
         }
 
@@ -914,7 +943,7 @@
         public uint SetSno;
         public int GemType;
         public int GemRank;
-        public int RowGroup; // For row-locked sorting
+        public int RowGroup;
     }
 
     internal class MoveOp

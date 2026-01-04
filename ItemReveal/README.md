@@ -1,60 +1,60 @@
-# Item Reveal Plugin for TurboHUD
+# Item Reveal Plugin v2.2 for TurboHUD
 
-**Instantly see if unidentified items are Ancient or Primal!**
-
----
-
-## ?? Important Clarification
-
-**Item stats are rolled SERVER-SIDE when you identify them.**
-
-This plugin CANNOT show actual stat rolls before identification - that's impossible because they don't exist yet!
-
-### What IS Accurate on Unidentified Items:
-- ? **Ancient status** - 100% accurate!
-- ? **Primal status** - 100% accurate!
-- ? **Set piece identification** - 100% accurate!
-- ? **Item type/name** - 100% accurate!
-
-### What This Means for You:
-- Skip identifying trash legendaries
-- Prioritize identifying Ancients/Primals
-- Know if a ground drop is worth picking up
-- Save time by focusing on quality items
+**See Ancient/Primal status and possible stat ranges on unidentified items!**
 
 ---
 
-## ?? Installation
+## ?? The Truth About Item Stats
 
-1. Copy the `ItemReveal` folder to:
-   ```
-   TurboHUD\plugins\Custom\
-   ```
+### What We CAN See (100% Accurate):
+| Data | Status | Notes |
+|------|--------|-------|
+| **Ancient/Primal** | ? Accurate | Always visible, even unidentified |
+| **Set Item** | ? Accurate | SetSno is populated |
+| **Item Type** | ? Accurate | From SnoItem data |
+| **Stat Ranges** | ? Accurate | Min/Max values show what CAN roll |
+| **Item Seed** | ? Available | Unique identifier |
 
-2. Restart TurboHUD
+### What Is HIDDEN (Server-Side):
+| Data | Status | Reason |
+|------|--------|--------|
+| **Actual Stat Values** | ? Hidden | `Cur` is 0.00 until identified |
+| **Perfection %** | ? Hidden | Calculated from actual values |
+| **Legendary Power Values** | ? Hidden | Server determines on ID |
+
+### Why?
+Diablo 3 uses **server-authoritative stat rolling**. The actual values are NOT stored client-side until you identify the item. TurboHUD can only read what the game client knows.
 
 ---
 
-## ? Features
+## ? What This Plugin Shows
 
-### Ancient/Primal Detection
-- **!! PRIMAL !!** - Red highlight + text for primal items
-- **\* ANCIENT \*** - Orange highlight + text for ancient items
-- Works on ground loot AND inventory items
+### For Unidentified Items:
+```
+Dead Man's Legacy
+* ANCIENT *
+[Set Item]
+????????????????????????
+? UNIDENTIFIED
+????????????????????????
+? Confirmed Data:
+  Quality: ANCIENT
+  Set Item: Yes
+  Seed: 392493527
 
-### Identified Item Stats
-For items that ARE identified, the plugin shows:
-- Full stat breakdown with perfection %
+?? Possible Stats (ranges):
+  IAS%: 15.0% - 20.0%
+  LegPower: 150% - 200%
+
+? Actual values hidden until ID
+(Server-side stat rolling)
+```
+
+### For Identified Items:
+- Full stat breakdown with actual values
+- Perfection % for each stat
 - Color-coded quality (Green 85%+, Gold 95%+)
-- Legendary powers/affixes
-- Overall perfection score
-
-### Visual Highlights
-| Item Type | Highlight Color |
-|-----------|-----------------|
-| Primal (Unidentified) | Bright Red border |
-| Ancient (Unidentified) | Orange border |
-| Regular Legendary | Yellow border |
+- Legendary powers
 
 ---
 
@@ -62,26 +62,27 @@ For items that ARE identified, the plugin shows:
 
 | Key | Action |
 |-----|--------|
-| **F4** | Toggle Item Reveal ON/OFF |
+| **F4** | Toggle plugin ON/OFF |
+| **F5** | Toggle Raw Data mode |
 
 ---
 
-## ?? Usage
+## ?? How To Use This
 
-### Ground Loot
-- Ancient/Primal items show labels above them
-- Know instantly if a drop is worth picking up
-- Skip regular legendaries, grab the Ancients!
+### Priority System:
+1. **!! PRIMAL !!** ? Identify immediately! (Red highlight)
+2. **\* ANCIENT \*** ? High priority (Orange highlight)
+3. **[SET]** ? Check if you need it
+4. No label ? Regular legendary
 
-### Inventory
-- Hover over any legendary item
-- Unidentified items show Ancient/Primal status
-- Identified items show full stats + perfection
+### Stat Range Reading:
+- `IAS%: 15.0% - 20.0%` means the stat will roll somewhere in that range
+- Narrow ranges = consistent rolls
+- Wide ranges = more variance
 
-### Workflow
-1. See "!! PRIMAL !!" on ground ? Pick it up immediately!
-2. See "\* ANCIENT \*" on ground ? Worth identifying
-3. No label ? Regular legendary, lower priority
+### Ground Loot:
+- Ancient/Primal labels appear above items on ground
+- No need to hover - instant visibility
 
 ---
 
@@ -90,62 +91,48 @@ For items that ARE identified, the plugin shows:
 Edit `ItemRevealCustomizer.cs`:
 
 ```csharp
-// === Display Settings ===
-plugin.ShowInventoryStats = true;     // Show in inventory/stash
-plugin.ShowGroundStats = true;        // Show on ground items
-plugin.ShowPerfection = true;         // Show perfection % (identified only)
-plugin.ShowAncientStatus = true;      // Show Ancient/Primal indicator
-plugin.LegendaryOnly = true;          // Only legendary items
-plugin.MaxStatsToShow = 10;           // Max stats in tooltip
-
-// === Perfection Thresholds (identified items only) ===
-plugin.GoodPerfectionThreshold = 85f;  // Green at 85%+
-plugin.GreatPerfectionThreshold = 95f; // Gold at 95%+
+plugin.ShowInventoryStats = true;      // Show in inventory
+plugin.ShowGroundStats = true;         // Show on ground items
+plugin.ShowPerfection = true;          // Show % on identified
+plugin.ShowAncientStatus = true;       // Show Ancient/Primal
+plugin.LegendaryOnly = true;           // Only legendaries
+plugin.MaxStatsToShow = 12;            // Max stats displayed
+plugin.GoodPerfectionThreshold = 85f;  // Green threshold
+plugin.GreatPerfectionThreshold = 95f; // Gold threshold
 ```
-
----
-
-## ?? Time-Saving Tips
-
-1. **Ground Loot Triage**
-   - Primals: Pick up immediately
-   - Ancients: Pick up if relevant
-   - No label: Leave or pick up last
-
-2. **Inventory Management**
-   - Identify Primals first
-   - Then Ancients
-   - Regular legendaries last (or salvage blind)
-
-3. **Efficient Farming**
-   - Don't waste time identifying every legendary
-   - Focus on Ancient/Primal items
-   - Salvage regular legendaries without looking
-
----
-
-## ?? Files
-
-| File | Description |
-|------|-------------|
-| `ItemRevealPlugin.cs` | Main plugin |
-| `ItemRevealCustomizer.cs` | Configuration |
-| `README.md` | This file |
 
 ---
 
 ## ?? Changelog
 
-### v1.1.0 - Accuracy Update
-- Fixed: Clarified that stats cannot be revealed before identification
-- Fixed: Ancient/Primal status is what's actually reliable
-- Added: Better visual highlights for Ancients/Primals
-- Added: Full stat display for identified items
+### v2.2.0 - Truth Edition
+- FIXED: Now correctly shows stat RANGES for unidentified items
+- FIXED: Clear indication of what data is confirmed vs hidden
+- NEW: Shows "Possible Stats" with Min-Max ranges
+- NEW: Cleaner layout for unidentified items
+- IMPROVED: Better explanation of server-side stat rolling
 
-### v1.0.0 - Initial Release
-- Ancient/Primal detection on unidentified items
-- Stat display for identified items
+### v2.1.0 - Deep Memory Explorer
+- Added comprehensive debug mode
+- Shows all available IItem properties
+
+### v2.0.0 - Experimental
+- Initial unidentified item exploration
+
+### v1.0.0 - Initial
+- Ancient/Primal detection
 
 ---
 
-**Know your Ancients and Primals instantly! ??**
+## ?? Technical Details
+
+TurboHUD's `IItemPerfection` structure:
+- `Min` - Minimum possible value (available)
+- `Max` - Maximum possible value (available)  
+- `Cur` - Current/actual value (0.00 for unidentified!)
+
+The game client knows WHAT stats can roll (Min/Max), but the server determines the actual values when you identify.
+
+---
+
+**Know your Ancients instantly! ??**

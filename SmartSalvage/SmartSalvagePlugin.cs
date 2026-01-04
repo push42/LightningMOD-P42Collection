@@ -7,10 +7,13 @@
     using System.Linq;
     using System.Windows.Forms;
     using SharpDX.DirectInput;
+    using Turbo.Plugins.Custom.Core;
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// Smart Salvage Plugin v3.0 - Premium Edition
+    /// Smart Salvage Plugin v3.0 - Core Integrated
+    /// 
+    /// Now integrated with the Core Plugin Framework!
     /// 
     /// Features:
     /// - Beautiful, polished UI with smooth animations
@@ -24,8 +27,20 @@
     /// - Shift+U = Open profile manager
     /// - Ctrl+U = Quick toggle all profiles
     /// </summary>
-    public class SmartSalvagePlugin : BasePlugin, IKeyEventHandler, IInGameTopPainter, IAfterCollectHandler
+    public class SmartSalvagePlugin : CustomPluginBase, IKeyEventHandler, IInGameTopPainter, IAfterCollectHandler
     {
+        #region Plugin Metadata
+
+        public override string PluginId => "smart-salvage";
+        public override string PluginName => "Smart Salvage";
+        public override string PluginDescription => "Intelligent auto-salvage with build profiles and stat rules";
+        public override string PluginVersion => "3.0.0";
+        public override string PluginCategory => "automation";
+        public override string PluginIcon => "🔧";
+        public override bool HasSettings => true;
+
+        #endregion
+
         #region Public Settings
 
         public IKeyEvent SalvageKey { get; set; }
@@ -138,7 +153,7 @@
         private bool _showManager;
         private int _scrollOffset;
         private int _maxVisibleItems = 8;
-        private string _activeTab = "profiles";  // profiles, rules, global, import
+        private string _activeTab = "profiles";  // profiles, rules, global, import, editor
 
         // Import state
         private string _importUrl;
@@ -160,6 +175,41 @@
         // Tooltip
         private string _tooltipText;
         private RectangleF _tooltipAnchor;
+
+        // Rule Editor State
+        private bool _isEditingRule;
+        private StatRule _editingRule;
+        private string _editorItemName = "";
+        private int _editorStatIndex = 0;
+        private int _editorOpIndex = 1;  // Default to >=
+        private string _editorValue = "";
+        private int _editorLogicIndex = 0;  // 0=AND, 1=OR
+        private List<StatCondition> _editorConditions = new List<StatCondition>();
+        private string _editorStatus = "";
+        private StatusType _editorStatusType = StatusType.Info;
+        private int _rulesScrollOffset = 0;
+
+        // Stat/Op display names for editor
+        private static readonly string[] StatNames = {
+            "CDR", "RCR", "CHC", "CHD", "IAS", "AD", "Elite%",
+
+            "Armor", "All Resist", "Life%", "LoH", "Regen", "VIT",
+            "STR", "DEX", "INT", "Sockets", "Perfection%"
+        };
+        private static readonly StatType[] StatValues = {
+            StatType.CooldownReduction, StatType.ResourceCostReduction,
+            StatType.CritChance, StatType.CritDamage, StatType.AttackSpeed,
+            StatType.AreaDamage, StatType.EliteDamage,
+            StatType.Armor, StatType.AllResist, StatType.LifePercent,
+            StatType.LifePerHit, StatType.LifeRegen, StatType.Vitality,
+            StatType.Strength, StatType.Dexterity, StatType.Intelligence,
+            StatType.SocketCount, StatType.Perfection
+        };
+        private static readonly string[] OpNames = { ">", ">=", "<", "<=", "=" };
+        private static readonly CompareOp[] OpValues = {
+            CompareOp.GreaterThan, CompareOp.GreaterOrEqual,
+            CompareOp.LessThan, CompareOp.LessOrEqual, CompareOp.Equal
+        };
 
         #endregion
 
@@ -185,12 +235,14 @@
             // Initialize managers
             BlacklistMgr = new BlacklistManager();
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            BlacklistMgr.DataDirectory = Path.Combine(basePath, "plugins", "Custom", "SmartSalvage");
+            string dataDir = Path.Combine(basePath, "plugins", "Custom", "SmartSalvage");
+            BlacklistMgr.DataDirectory = dataDir;
             BlacklistMgr.InitializeBuiltInProfiles();
             BlacklistMgr.LoadFromFile();
 
             Crawler = new MaxrollCrawler();
             RulesMgr = new RulesManager();
+            RulesMgr.Initialize(dataDir);
 
             _salvageAttempted = new HashSet<string>();
             _clickAreas = new Dictionary<string, RectangleF>();
@@ -310,6 +362,8 @@
                 {
                     _showManager = !_showManager;
                     _scrollOffset = 0;
+                    _rulesScrollOffset = 0;
+                    ResetRuleEditor();
                 }
                 return;
             }
@@ -577,8 +631,11 @@
 
         #region UI Rendering
 
-        public void PaintTopInGame(ClipState clipState)
+        public new void PaintTopInGame(ClipState clipState)
         {
+            // IMPORTANT: Call base to ensure Core registration (works with any ClipState)
+            base.PaintTopInGame(clipState);
+            
             if (clipState != ClipState.Inventory || !Hud.Game.IsInGame) return;
             if (!IsSalvageWindowOpen() && !IsRepairWindowOpen()) return;
 
@@ -695,13 +752,14 @@
 
             float pad = 14, cx = x + pad, cy = y + pad, cw = w - pad * 2;
 
-            // Tab bar
-            string[] tabs = { "profiles", "rules", "global", "import" };
-            string[] labels = { "📋 Profiles", "📐 Rules", "⚙ Global", "🌐 Import" };
-            float tabW = (cw - 12) / 4;
+            // Tab bar - now with 5 tabs
+            string[] tabs = { "profiles", "rules", "editor", "global", "import" };
+            string[] labels = { "📋", "📐", "✏️", "⚙", "🌐" };
+            string[] tooltips = { "Profiles", "Rules", "Editor", "Global", "Import" };
+            float tabW = (cw - 16) / 5;
             float tabH = 28;
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
                 var rect = new RectangleF(cx + (tabW + 4) * i, cy, tabW, tabH);
                 _clickAreas[$"tab_{tabs[i]}"] = rect;
@@ -714,6 +772,12 @@
                 var font = active ? _fontBody : _fontSmall;
                 var layout = font.GetTextLayout(labels[i]);
                 font.DrawText(layout, rect.X + (tabW - layout.Metrics.Width) / 2, rect.Y + (tabH - layout.Metrics.Height) / 2);
+
+                if (hover)
+                {
+                    _tooltipText = tooltips[i];
+                    _tooltipAnchor = rect;
+                }
             }
             cy += tabH + 14;
 
@@ -723,6 +787,7 @@
             {
                 case "profiles": DrawProfilesTab(cx, cy, cw, contentH); break;
                 case "rules": DrawRulesTab(cx, cy, cw, contentH); break;
+                case "editor": DrawEditorTab(cx, cy, cw, contentH); break;
                 case "global": DrawGlobalTab(cx, cy, cw, contentH); break;
                 case "import": DrawImportTab(cx, cy, cw, contentH); break;
             }
@@ -806,7 +871,7 @@
 
         private void DrawRulesTab(float x, float y, float w, float h)
         {
-            var headerLayout = _fontHeader.GetTextLayout("Stat-Based Rules");
+            var headerLayout = _fontHeader.GetTextLayout($"Stat-Based Rules ({RulesMgr.StatRules.Count(r => r.IsEnabled)}/{RulesMgr.StatRules.Count})");
             _fontHeader.DrawText(headerLayout, x, y);
             y += headerLayout.Metrics.Height + 6;
 
@@ -814,20 +879,33 @@
             _fontMuted.DrawText(descLayout, x, y);
             y += descLayout.Metrics.Height + 12;
 
-            // Rules list
-            float rowH = 48;
-            foreach (var rule in RulesMgr.StatRules)
-            {
-                var rect = new RectangleF(x, y, w - 14, rowH);
-                _clickAreas[$"rule_{rule.Id}"] = rect;
+            // Add Rule button
+            float btnH = 26;
+            var addRect = new RectangleF(x, y, w - 14, btnH);
+            _clickAreas["add_rule"] = addRect;
+            DrawButton(addRect, "➕ Create New Rule", IsMouseOver(addRect));
+            y += btnH + 12;
 
+            // Rules list with scroll
+            var rules = RulesMgr.StatRules.OrderByDescending(r => r.IsEnabled).ThenBy(r => r.ItemName).ToList();
+            float rowH = 58;
+            int maxVisible = 5;
+            int visible = Math.Min(maxVisible, rules.Count - _rulesScrollOffset);
+
+            for (int i = 0; i < visible && i + _rulesScrollOffset < rules.Count; i++)
+            {
+                var rule = rules[i + _rulesScrollOffset];
+                var rect = new RectangleF(x, y, w - 14, rowH);
+                
                 bool hover = IsMouseOver(rect);
                 var rowBrush = hover ? _surfaceOverlay : _surfaceCard;
                 rowBrush.DrawRectangle(rect);
 
                 // Toggle
-                float toggleW = 40, toggleH = 20;
-                float tx = x + 8, ty = y + (rowH - toggleH) / 2;
+                float toggleW = 36, toggleH = 18;
+                float tx = x + 8, ty = y + 8;
+                var toggleRect = new RectangleF(tx, ty, toggleW, toggleH);
+                _clickAreas[$"rule_toggle_{rule.Id}"] = toggleRect;
                 _toggleTrack.DrawRectangle(tx, ty, toggleW, toggleH);
                 
                 float knobSize = toggleH - 4;
@@ -835,26 +913,185 @@
                 var knobBrush = rule.IsEnabled ? _toggleOn : _toggleOff;
                 knobBrush.DrawRectangle(knobX, ty + 2, knobSize, knobSize);
 
-                // Info
-                float textX = tx + toggleW + 12;
+                // Item name
+                float textX = tx + toggleW + 10;
+                string name = rule.ItemName;
+                if (name.Length > 20) name = name.Substring(0, 17) + "...";
                 var nameFont = rule.IsEnabled ? _fontBody : _fontMuted;
-                var nameLayout = nameFont.GetTextLayout($"📐 {rule.ItemName}");
+                var nameLayout = nameFont.GetTextLayout($"📐 {name}");
                 nameFont.DrawText(nameLayout, textX, y + 6);
 
                 // Conditions summary
                 string condText = string.Join(rule.Logic == RuleLogic.And ? " AND " : " OR ", 
                     rule.Conditions.Select(c => c.ToString()));
-                if (condText.Length > 35) condText = condText.Substring(0, 32) + "...";
+                if (condText.Length > 32) condText = condText.Substring(0, 29) + "...";
                 var condLayout = _fontMicro.GetTextLayout(condText);
                 _fontMicro.DrawText(condLayout, textX, y + 8 + nameLayout.Metrics.Height);
+
+                // Edit button
+                float btnW = 32;
+                var editRect = new RectangleF(x + w - 14 - btnW * 2 - 8, y + (rowH - 22) / 2, btnW, 22);
+                _clickAreas[$"rule_edit_{rule.Id}"] = editRect;
+                DrawMiniButton(editRect, "✏️", IsMouseOver(editRect));
+
+                // Delete button
+                var delRect = new RectangleF(x + w - 14 - btnW - 4, y + (rowH - 22) / 2, btnW, 22);
+                _clickAreas[$"rule_del_{rule.Id}"] = delRect;
+                DrawMiniButton(delRect, "🗑", IsMouseOver(delRect), true);
 
                 y += rowH + 3;
             }
 
-            // Info
-            y += 10;
-            var infoLayout = _fontMuted.GetTextLayout("Example: Keep 'Dawn' only if CDR ≥ 8%");
+            // Scroll buttons for rules
+            if (rules.Count > maxVisible)
+            {
+                float sx = x + w - 24, sh = rowH * visible, sy = y - sh - 3;
+                _scrollTrack.DrawRectangle(sx, sy, 6, sh);
+                float thumbH = sh * ((float)visible / rules.Count);
+                float thumbY = sy + (sh - thumbH) * ((float)_rulesScrollOffset / Math.Max(1, rules.Count - maxVisible));
+                _scrollThumb.DrawRectangle(sx, thumbY, 6, thumbH);
+
+                _clickAreas["rules_scroll_up"] = new RectangleF(sx - 15, sy, 25, sh / 2);
+                _clickAreas["rules_scroll_down"] = new RectangleF(sx - 15, sy + sh / 2, 25, sh / 2);
+            }
+
+            // Info text at bottom
+            y = h - 30;
+            var infoLayout = _fontMuted.GetTextLayout("💡 Use Editor tab to create/modify rules");
             _fontMuted.DrawText(infoLayout, x, y);
+        }
+
+        private void DrawEditorTab(float x, float y, float w, float h)
+        {
+            string headerText = _isEditingRule ? $"✏️ Edit Rule: {_editingRule?.ItemName}" : "✏️ Create New Rule";
+            var headerLayout = _fontHeader.GetTextLayout(headerText);
+            _fontHeader.DrawText(headerLayout, x, y);
+            y += headerLayout.Metrics.Height + 6;
+
+            var descLayout = _fontMuted.GetTextLayout(_isEditingRule ? "Modify the stat requirements below" : "Define stat requirements to keep items");
+            _fontMuted.DrawText(descLayout, x, y);
+            y += descLayout.Metrics.Height + 14;
+
+            float inputH = 28, labelH = 18, spacing = 8;
+
+            // Item Name input
+            var itemLabel = _fontSmall.GetTextLayout("Item Name:");
+            _fontSmall.DrawText(itemLabel, x, y);
+            y += labelH;
+
+            var itemRect = new RectangleF(x, y, w - 14, inputH);
+            _clickAreas["editor_item"] = itemRect;
+            DrawInputField(itemRect, _editorItemName, "e.g., Dawn, Convention of Elements...", IsMouseOver(itemRect));
+            y += inputH + spacing + 4;
+
+            // Conditions section
+            var condLabel = _fontSmall.GetTextLayout($"Conditions ({_editorConditions.Count}):");
+            _fontSmall.DrawText(condLabel, x, y);
+            y += labelH;
+
+            // List existing conditions
+            for (int i = 0; i < _editorConditions.Count; i++)
+            {
+                var cond = _editorConditions[i];
+                var condRect = new RectangleF(x, y, w - 14, 26);
+                _surfaceCard.DrawRectangle(condRect);
+
+                var condText = _fontMono.GetTextLayout(cond.ToString());
+                _fontMono.DrawText(condText, x + 10, y + 4);
+
+                // Remove condition button
+                var remRect = new RectangleF(x + w - 14 - 26, y + 2, 22, 22);
+                _clickAreas[$"editor_rem_cond_{i}"] = remRect;
+                DrawMiniButton(remRect, "✕", IsMouseOver(remRect), true);
+
+                y += 28;
+            }
+
+            // Add condition row
+            y += 4;
+            float colW = (w - 14 - 16) / 4;
+
+            // Stat selector
+            var statRect = new RectangleF(x, y, colW, inputH);
+            _clickAreas["editor_stat_prev"] = new RectangleF(x, y, 20, inputH);
+            _clickAreas["editor_stat_next"] = new RectangleF(x + colW - 20, y, 20, inputH);
+            DrawSelector(statRect, StatNames[_editorStatIndex], IsMouseOver(statRect));
+
+            // Operator selector
+            var opRect = new RectangleF(x + colW + 4, y, 50, inputH);
+            _clickAreas["editor_op_prev"] = new RectangleF(x + colW + 4, y, 20, inputH);
+            _clickAreas["editor_op_next"] = new RectangleF(x + colW + 34, y, 20, inputH);
+            DrawSelector(opRect, OpNames[_editorOpIndex], IsMouseOver(opRect));
+
+            // Value input
+            var valRect = new RectangleF(x + colW + 58, y, colW - 10, inputH);
+            _clickAreas["editor_value"] = valRect;
+            DrawInputField(valRect, _editorValue, "Value", IsMouseOver(valRect));
+
+            // Add condition button
+            var addCondRect = new RectangleF(x + w - 14 - 70, y, 70, inputH);
+            _clickAreas["editor_add_cond"] = addCondRect;
+            DrawButton(addCondRect, "+ Add", IsMouseOver(addCondRect));
+            y += inputH + spacing + 4;
+
+            // Logic selector (AND/OR)
+            if (_editorConditions.Count > 1)
+            {
+                var logicLabel = _fontSmall.GetTextLayout("Combine conditions with:");
+                _fontSmall.DrawText(logicLabel, x, y);
+                y += labelH;
+
+                float logicBtnW = 60;
+                var andRect = new RectangleF(x, y, logicBtnW, 24);
+                var orRect = new RectangleF(x + logicBtnW + 8, y, logicBtnW, 24);
+                _clickAreas["editor_logic_and"] = andRect;
+                _clickAreas["editor_logic_or"] = orRect;
+
+                DrawToggleButton(andRect, "AND", _editorLogicIndex == 0, IsMouseOver(andRect));
+                DrawToggleButton(orRect, "OR", _editorLogicIndex == 1, IsMouseOver(orRect));
+                y += 28 + spacing;
+            }
+
+            // Status message
+            if (!string.IsNullOrEmpty(_editorStatus))
+            {
+                var statusFont = GetStatusFont(_editorStatusType);
+                var statusLayout = statusFont.GetTextLayout(_editorStatus);
+                statusFont.DrawText(statusLayout, x, y);
+                y += statusLayout.Metrics.Height + 8;
+            }
+
+            // Action buttons at bottom
+            y = h - 45;
+            float actionBtnW = (w - 14 - 16) / 3;
+            float btnH = 30;
+
+            if (_isEditingRule)
+            {
+                var saveRect = new RectangleF(x, y, actionBtnW, btnH);
+                var cancelRect = new RectangleF(x + actionBtnW + 8, y, actionBtnW, btnH);
+                var deleteRect = new RectangleF(x + (actionBtnW + 8) * 2, y, actionBtnW, btnH);
+
+                _clickAreas["editor_save"] = saveRect;
+                _clickAreas["editor_cancel"] = cancelRect;
+                _clickAreas["editor_delete"] = deleteRect;
+
+                DrawButton(saveRect, "💾 Save", IsMouseOver(saveRect));
+                DrawButton(cancelRect, "✕ Cancel", IsMouseOver(cancelRect));
+                DrawButton(deleteRect, "🗑 Delete", IsMouseOver(deleteRect), false, true);
+            }
+            else
+            {
+                var createRect = new RectangleF(x, y, (w - 14 - 8) / 2, btnH);
+                var clearRect = new RectangleF(x + (w - 14 - 8) / 2 + 8, y, (w - 14 - 8) / 2, btnH);
+
+                _clickAreas["editor_create"] = createRect;
+                _clickAreas["editor_clear"] = clearRect;
+
+                bool canCreate = !string.IsNullOrWhiteSpace(_editorItemName) && _editorConditions.Count > 0;
+                DrawButton(createRect, "✓ Create Rule", IsMouseOver(createRect), !canCreate);
+                DrawButton(clearRect, "🔄 Clear", IsMouseOver(clearRect));
+            }
         }
 
         private void DrawGlobalTab(float x, float y, float w, float h)
@@ -1022,13 +1259,68 @@
 
         #region UI Helpers
 
-        private void DrawButton(RectangleF rect, string text, bool hovered, bool disabled = false)
+        private void DrawButton(RectangleF rect, string text, bool hovered, bool disabled = false, bool danger = false)
         {
-            var brush = disabled ? _btnDisabled : (hovered ? _btnHover : _btnDefault);
+            IBrush brush;
+            if (disabled) brush = _btnDisabled;
+            else if (danger && hovered) brush = _statusError;
+            else if (hovered) brush = _btnHover;
+            else brush = _btnDefault;
+
             brush.DrawRectangle(rect);
             var layout = _fontBody.GetTextLayout(text);
             _fontBody.DrawText(layout, rect.X + (rect.Width - layout.Metrics.Width) / 2,
                               rect.Y + (rect.Height - layout.Metrics.Height) / 2);
+        }
+
+        private void DrawMiniButton(RectangleF rect, string icon, bool hovered, bool danger = false)
+        {
+            var brush = danger && hovered ? _statusError : (hovered ? _btnHover : _btnDefault);
+            brush.DrawRectangle(rect);
+            var layout = _fontSmall.GetTextLayout(icon);
+            _fontSmall.DrawText(layout, rect.X + (rect.Width - layout.Metrics.Width) / 2,
+                               rect.Y + (rect.Height - layout.Metrics.Height) / 2);
+        }
+
+        private void DrawInputField(RectangleF rect, string value, string placeholder, bool hovered)
+        {
+            var brush = hovered ? _surfaceOverlay : _surfaceCard;
+            brush.DrawRectangle(rect);
+            _borderDefault.DrawRectangle(rect);
+
+            string display = string.IsNullOrEmpty(value) ? placeholder : value;
+            var font = string.IsNullOrEmpty(value) ? _fontMuted : _fontMono;
+            var layout = font.GetTextLayout(display);
+            font.DrawText(layout, rect.X + 8, rect.Y + (rect.Height - layout.Metrics.Height) / 2);
+        }
+
+        private void DrawSelector(RectangleF rect, string value, bool hovered)
+        {
+            var brush = hovered ? _surfaceOverlay : _surfaceCard;
+            brush.DrawRectangle(rect);
+            _borderDefault.DrawRectangle(rect);
+
+            // Arrows
+            var leftLayout = _fontSmall.GetTextLayout("◀");
+            var rightLayout = _fontSmall.GetTextLayout("▶");
+            _fontMuted.DrawText(leftLayout, rect.X + 4, rect.Y + (rect.Height - leftLayout.Metrics.Height) / 2);
+            _fontMuted.DrawText(rightLayout, rect.X + rect.Width - rightLayout.Metrics.Width - 4, rect.Y + (rect.Height - rightLayout.Metrics.Height) / 2);
+
+            // Value
+            var layout = _fontMono.GetTextLayout(value);
+            _fontMono.DrawText(layout, rect.X + (rect.Width - layout.Metrics.Width) / 2, rect.Y + (rect.Height - layout.Metrics.Height) / 2);
+        }
+
+        private void DrawToggleButton(RectangleF rect, string text, bool active, bool hovered)
+        {
+            var brush = active ? _btnActive : (hovered ? _btnHover : _btnDefault);
+            brush.DrawRectangle(rect);
+            if (active) _borderAccent.DrawRectangle(rect);
+
+            var font = active ? _fontBody : _fontSmall;
+            var layout = font.GetTextLayout(text);
+            font.DrawText(layout, rect.X + (rect.Width - layout.Metrics.Width) / 2,
+                         rect.Y + (rect.Height - layout.Metrics.Height) / 2);
         }
 
         private void DrawStatBadge(float x, float y, string icon, string value, IBrush bg)
@@ -1094,35 +1386,9 @@
 
         private void HandleClick(string id)
         {
-            if (id == "manager") { _showManager = !_showManager; _scrollOffset = 0; return; }
+            if (id == "manager") { _showManager = !_showManager; _scrollOffset = 0; _rulesScrollOffset = 0; ResetRuleEditor(); return; }
 
             if (id.StartsWith("tab_")) { _activeTab = id.Substring(4); return; }
-
-            if (id.StartsWith("profile_"))
-            {
-                BlacklistMgr.ToggleProfile(id.Substring(8));
-                return;
-            }
-
-            if (id.StartsWith("rule_"))
-            {
-                RulesMgr.ToggleRule(id.Substring(5));
-                return;
-            }
-
-            // Global toggles
-            var gr = RulesMgr.GlobalRules;
-            switch (id)
-            {
-                case "global_primals": gr.AlwaysKeepPrimals = !gr.AlwaysKeepPrimals; return;
-                case "global_ancients": gr.AlwaysKeepAncients = !gr.AlwaysKeepAncients; return;
-                case "global_sets": gr.AlwaysKeepSetItems = !gr.AlwaysKeepSetItems; return;
-                case "global_highperf": gr.AlwaysKeepHighPerfection = !gr.AlwaysKeepHighPerfection; return;
-                case "global_socketed": gr.ProtectSocketedItems = !gr.ProtectSocketedItems; return;
-                case "global_enchanted": gr.ProtectEnchantedItems = !gr.ProtectEnchantedItems; return;
-                case "global_armory": gr.ProtectArmoryItems = !gr.ProtectArmoryItems; return;
-                case "global_locked": gr.ProtectLockedSlots = !gr.ProtectLockedSlots; return;
-            }
 
             if (id == "enable_all")
             {
@@ -1145,6 +1411,165 @@
             {
                 int max = Math.Max(0, BlacklistMgr.Profiles.Count - _maxVisibleItems);
                 _scrollOffset = Math.Min(max, _scrollOffset + 1);
+                return;
+            }
+
+            // Global toggles
+            var gr = RulesMgr.GlobalRules;
+            switch (id)
+            {
+                case "global_primals": gr.AlwaysKeepPrimals = !gr.AlwaysKeepPrimals; return;
+                case "global_ancients": gr.AlwaysKeepAncients = !gr.AlwaysKeepAncients; return;
+                case "global_sets": gr.AlwaysKeepSetItems = !gr.AlwaysKeepSetItems; return;
+                case "global_highperf": gr.AlwaysKeepHighPerfection = !gr.AlwaysKeepHighPerfection; return;
+                case "global_socketed": gr.ProtectSocketedItems = !gr.ProtectSocketedItems; return;
+                case "global_enchanted": gr.ProtectEnchantedItems = !gr.ProtectEnchantedItems; return;
+                case "global_armory": gr.ProtectArmoryItems = !gr.ProtectArmoryItems; return;
+                case "global_locked": gr.ProtectLockedSlots = !gr.ProtectLockedSlots; return;
+            }
+
+            // Profile handlers
+            if (id.StartsWith("profile_"))
+            {
+                BlacklistMgr.ToggleProfile(id.Substring(8));
+                return;
+            }
+
+            // Rule toggle
+            if (id.StartsWith("rule_toggle_"))
+            {
+                RulesMgr.ToggleRule(id.Substring(12));
+                return;
+            }
+
+            // Rule edit
+            if (id.StartsWith("rule_edit_"))
+            {
+                string ruleId = id.Substring(10);
+                var rule = RulesMgr.StatRules.FirstOrDefault(r => r.Id == ruleId);
+                if (rule != null) StartEditingRule(rule);
+                return;
+            }
+
+            // Rule delete from list
+            if (id.StartsWith("rule_del_"))
+            {
+                string ruleId = id.Substring(9);
+                var rule = RulesMgr.StatRules.FirstOrDefault(r => r.Id == ruleId);
+                if (rule != null)
+                {
+                    RulesMgr.StatRules.Remove(rule);
+                    SaveRulesToFile();
+                    SetStatus($"Deleted rule: {rule.ItemName}", StatusType.Warning);
+                }
+                return;
+            }
+
+            // Rules scroll
+            if (id == "rules_scroll_up") { _rulesScrollOffset = Math.Max(0, _rulesScrollOffset - 1); return; }
+            if (id == "rules_scroll_down")
+            {
+                int max = Math.Max(0, RulesMgr.StatRules.Count - 5);
+                _rulesScrollOffset = Math.Min(max, _rulesScrollOffset + 1);
+                return;
+            }
+
+            // Add rule button (goes to editor)
+            if (id == "add_rule")
+            {
+                ResetRuleEditor();
+                _activeTab = "editor";
+                return;
+            }
+
+            // Editor handlers
+            if (id == "editor_item")
+            {
+                try { if (Clipboard.ContainsText()) { _editorItemName = Clipboard.GetText().Trim(); _editorStatus = "Item name pasted"; _editorStatusType = StatusType.Info; } }
+                catch { _editorStatus = "Clipboard error"; _editorStatusType = StatusType.Error; }
+                return;
+            }
+
+            if (id == "editor_stat_prev") { _editorStatIndex = (_editorStatIndex - 1 + StatNames.Length) % StatNames.Length; return; }
+            if (id == "editor_stat_next") { _editorStatIndex = (_editorStatIndex + 1) % StatNames.Length; return; }
+            if (id == "editor_op_prev") { _editorOpIndex = (_editorOpIndex - 1 + OpNames.Length) % OpNames.Length; return; }
+            if (id == "editor_op_next") { _editorOpIndex = (_editorOpIndex + 1) % OpNames.Length; return; }
+
+            if (id == "editor_value")
+            {
+                try { if (Clipboard.ContainsText()) { _editorValue = Clipboard.GetText().Trim(); } }
+                catch { }
+                return;
+            }
+
+            if (id == "editor_add_cond")
+            {
+                if (double.TryParse(_editorValue, out double val))
+                {
+                    _editorConditions.Add(new StatCondition(StatValues[_editorStatIndex], OpValues[_editorOpIndex], val));
+                    _editorValue = "";
+                    _editorStatus = "Condition added";
+                    _editorStatusType = StatusType.Success;
+                }
+                else
+                {
+                    _editorStatus = "Enter a valid number";
+                    _editorStatusType = StatusType.Error;
+                }
+                return;
+            }
+
+            if (id.StartsWith("editor_rem_cond_"))
+            {
+                if (int.TryParse(id.Substring(16), out int idx) && idx >= 0 && idx < _editorConditions.Count)
+                {
+                    _editorConditions.RemoveAt(idx);
+                    _editorStatus = "Condition removed";
+                    _editorStatusType = StatusType.Info;
+                }
+                return;
+            }
+
+            if (id == "editor_logic_and") { _editorLogicIndex = 0; return; }
+            if (id == "editor_logic_or") { _editorLogicIndex = 1; return; }
+
+            if (id == "editor_create")
+            {
+                CreateRuleFromEditor();
+                return;
+            }
+
+            if (id == "editor_save")
+            {
+                SaveEditedRule();
+                return;
+            }
+
+            if (id == "editor_cancel")
+            {
+                ResetRuleEditor();
+                _activeTab = "rules";
+                return;
+            }
+
+            if (id == "editor_delete")
+            {
+                if (_isEditingRule && _editingRule != null)
+                {
+                    RulesMgr.StatRules.Remove(_editingRule);
+                    SaveRulesToFile();
+                    SetStatus($"Deleted: {_editingRule.ItemName}", StatusType.Warning);
+                    ResetRuleEditor();
+                    _activeTab = "rules";
+                }
+                return;
+            }
+
+            if (id == "editor_clear")
+            {
+                ResetRuleEditor();
+                _editorStatus = "Editor cleared";
+                _editorStatusType = StatusType.Info;
                 return;
             }
 
@@ -1205,6 +1630,133 @@
             }
             catch (Exception ex) { _importStatus = ex.Message; _importStatusType = StatusType.Error; }
             finally { _isImporting = false; }
+        }
+
+        #endregion
+
+        #region Rule Editor Methods
+
+        private void ResetRuleEditor()
+        {
+            _isEditingRule = false;
+            _editingRule = null;
+            _editorItemName = "";
+            _editorStatIndex = 0;
+            _editorOpIndex = 1;
+            _editorValue = "";
+            _editorLogicIndex = 0;
+            _editorConditions = new List<StatCondition>();
+            _editorStatus = "";
+        }
+
+        private void StartEditingRule(StatRule rule)
+        {
+            _isEditingRule = true;
+            _editingRule = rule;
+            _editorItemName = rule.ItemName;
+            _editorLogicIndex = rule.Logic == RuleLogic.And ? 0 : 1;
+            _editorConditions = new List<StatCondition>(rule.Conditions.Select(c => new StatCondition(c.Stat, c.Operator, c.Value)));
+            _editorStatus = "";
+            _activeTab = "editor";
+        }
+
+        private void CreateRuleFromEditor()
+        {
+            if (string.IsNullOrWhiteSpace(_editorItemName))
+            {
+                _editorStatus = "Enter an item name";
+                _editorStatusType = StatusType.Error;
+                return;
+            }
+
+            if (_editorConditions.Count == 0)
+            {
+                _editorStatus = "Add at least one condition";
+                _editorStatusType = StatusType.Error;
+                return;
+            }
+
+            if (RulesMgr.StatRules.Any(r => r.ItemName.Equals(_editorItemName, StringComparison.OrdinalIgnoreCase)))
+            {
+                _editorStatus = "Rule for this item already exists";
+                _editorStatusType = StatusType.Warning;
+                return;
+            }
+
+            var newRule = new StatRule(_editorItemName)
+            {
+                Conditions = new List<StatCondition>(_editorConditions),
+                Logic = _editorLogicIndex == 0 ? RuleLogic.And : RuleLogic.Or,
+                IsEnabled = true
+            };
+
+            RulesMgr.StatRules.Add(newRule);
+            SaveRulesToFile();
+
+            SetStatus($"✓ Created rule: {_editorItemName}", StatusType.Success);
+            ResetRuleEditor();
+            _activeTab = "rules";
+        }
+
+        private void SaveEditedRule()
+        {
+            if (_editingRule == null) return;
+
+            if (string.IsNullOrWhiteSpace(_editorItemName))
+            {
+                _editorStatus = "Enter an item name";
+                _editorStatusType = StatusType.Error;
+                return;
+            }
+
+            if (_editorConditions.Count == 0)
+            {
+                _editorStatus = "Add at least one condition";
+                _editorStatusType = StatusType.Error;
+                return;
+            }
+
+            _editingRule.ItemName = _editorItemName;
+            _editingRule.Conditions = new List<StatCondition>(_editorConditions);
+            _editingRule.Logic = _editorLogicIndex == 0 ? RuleLogic.And : RuleLogic.Or;
+
+            SaveRulesToFile();
+
+            SetStatus($"✓ Updated: {_editorItemName}", StatusType.Success);
+            ResetRuleEditor();
+            _activeTab = "rules";
+        }
+
+        private void SaveRulesToFile()
+        {
+            try
+            {
+                string path = Path.Combine(BlacklistMgr.DataDirectory, "rules.json");
+                var data = new
+                {
+                    StatRules = RulesMgr.StatRules.Select(r => new
+                    {
+                        r.Id,
+                        r.ItemName,
+                        r.IsEnabled,
+                        Logic = r.Logic.ToString(),
+                        Conditions = r.Conditions.Select(c => new
+                        {
+                            Stat = c.Stat.ToString(),
+                            Operator = c.Operator.ToString(),
+                            c.Value
+                        }).ToList()
+                    }).ToList(),
+                    GlobalRules = RulesMgr.GlobalRules
+                };
+
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(path, json);
+            }
+            catch (Exception ex)
+            {
+                SetStatus($"Save error: {ex.Message}", StatusType.Error);
+            }
         }
 
         #endregion

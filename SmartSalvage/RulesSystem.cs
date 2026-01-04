@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
 
     /// <summary>
@@ -217,12 +218,21 @@
     {
         public List<StatRule> StatRules { get; set; }
         public GlobalRules GlobalRules { get; set; }
+        public string DataDirectory { get; set; }
 
         public RulesManager()
         {
             StatRules = new List<StatRule>();
             GlobalRules = new GlobalRules();
-            InitializeDefaultRules();
+        }
+
+        public void Initialize(string dataDir)
+        {
+            DataDirectory = dataDir;
+            if (!LoadFromFile())
+            {
+                InitializeDefaultRules();
+            }
         }
 
         private void InitializeDefaultRules()
@@ -252,6 +262,65 @@
             StatRules.Add(jewelryRule);
         }
 
+        public bool LoadFromFile()
+        {
+            try
+            {
+                string path = Path.Combine(DataDirectory, "rules.json");
+                if (!File.Exists(path)) return false;
+
+                string json = File.ReadAllText(path);
+                var data = Newtonsoft.Json.JsonConvert.DeserializeObject<RulesFileData>(json);
+                if (data == null) return false;
+
+                StatRules.Clear();
+                if (data.StatRules != null)
+                {
+                    foreach (var ruleData in data.StatRules)
+                    {
+                        var rule = new StatRule(ruleData.ItemName)
+                        {
+                            Id = ruleData.Id ?? Guid.NewGuid().ToString("N").Substring(0, 8),
+                            IsEnabled = ruleData.IsEnabled,
+                            Logic = ParseEnum<RuleLogic>(ruleData.Logic, RuleLogic.And),
+                            Conditions = new List<StatCondition>()
+                        };
+
+                        if (ruleData.Conditions != null)
+                        {
+                            foreach (var condData in ruleData.Conditions)
+                            {
+                                rule.Conditions.Add(new StatCondition(
+                                    ParseEnum<StatType>(condData.Stat, StatType.Perfection),
+                                    ParseEnum<CompareOp>(condData.Operator, CompareOp.GreaterOrEqual),
+                                    condData.Value
+                                ));
+                            }
+                        }
+
+                        StatRules.Add(rule);
+                    }
+                }
+
+                if (data.GlobalRules != null)
+                {
+                    GlobalRules = data.GlobalRules;
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private T ParseEnum<T>(string value, T defaultValue) where T : struct
+        {
+            if (string.IsNullOrEmpty(value)) return defaultValue;
+            return Enum.TryParse<T>(value, true, out var result) ? result : defaultValue;
+        }
+
         public StatRule GetRule(string itemName)
         {
             return StatRules.FirstOrDefault(r => 
@@ -279,5 +348,28 @@
                 rule.IsEnabled = !rule.IsEnabled;
             }
         }
+    }
+
+    // Helper classes for JSON deserialization
+    internal class RulesFileData
+    {
+        public List<StatRuleData> StatRules { get; set; }
+        public GlobalRules GlobalRules { get; set; }
+    }
+
+    internal class StatRuleData
+    {
+        public string Id { get; set; }
+        public string ItemName { get; set; }
+        public bool IsEnabled { get; set; }
+        public string Logic { get; set; }
+        public List<StatConditionData> Conditions { get; set; }
+    }
+
+    internal class StatConditionData
+    {
+        public string Stat { get; set; }
+        public string Operator { get; set; }
+        public double Value { get; set; }
     }
 }

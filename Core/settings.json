@@ -1,0 +1,15 @@
+{
+  "PluginStates": {
+    "auto-pickup-silent": true,
+    "inventory-sorter": true,
+    "smart-evade": false,
+    "smart-evade-lite": true,
+    "item-reveal": true,
+    "enhanced-navigation": true,
+    "kadala-auto-buy": true,
+    "smart-salvage": true,
+    "natalya-spike-trap-macro": true,
+    "lod-death-nova-macro": true,
+    "pylon-alert": true
+  }
+}

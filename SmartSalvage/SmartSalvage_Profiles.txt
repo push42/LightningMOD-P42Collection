@@ -1,6 +1,6 @@
 # Smart Salvage Profiles
 # Do not edit manually
-# Generated: 2025-12-31 03:24:55
+# Generated: 2026-01-04 04:23:29
 
 [CustomItems]
 
@@ -30,7 +30,7 @@ Description=DemonHunter build with 33 items
 SourceUrl=https://maxroll.gg/d3/guides/ue-multishot-demon-hunter-guide
 HeroClass=DemonHunter
 Icon=🏹
-IsEnabled=True
+IsEnabled=False
 IsImported=True
 Items=Accursed Visage|Aquila Cuirass|Avarice Band|Bane of the Powerful|Bane of the Stricken|Bane of the Trapped|Boon of the Hoarder|Cage of the Hellborn|Convention of Elements|Dawn|Echoing Fury|Esoteric Alteration|Focus|Fortress Ballista|Gloves of Worship|Goldwrap|Hexing Pants of Mr. Yan|Ice Climbers|In-geom|Mutilation Guard|Nemesis Bracers|Restraint|Ring of Royal Grandeur|Stone Gauntlets|Stone of Jordan|Stricken|The Compass Rose|The Flavor of Time|Unity|Unsanctified Shoulders|Warzechian Armguards|Wraps of Clarity|Wreath of Lightning
 
@@ -40,15 +40,45 @@ Description=DemonHunter build with 26 items
 SourceUrl=https://maxroll.gg/d3/guides/natalya-spike-trap-demon-hunter-guide
 HeroClass=DemonHunter
 Icon=🏹
-IsEnabled=True
+IsEnabled=False
 IsImported=True
 Items=Avarice Band|Bane of the Powerful|Bane of the Stricken|Bane of the Trapped|Boon of the Hoarder|Chanon Bolter|Convention of Elements|Dawn|Enforcer|Esoteric Alteration|Focus|Gloves of Worship|Gogok of Swiftness|Goldwrap|Ice Climbers|In-geom|Mutilation Guard|Nemesis Bracers|Pain Enhancer|Ring of Royal Grandeur|Stricken|The Compass Rose|The Flavor of Time|Unity|Warzechian Armguards|Wreath of Lightning
 
+[Profile:7c3d1282]
+Name=Diablo 3 Season 37 Shadow Impale DH
+Description=DemonHunter build with 37 items
+SourceUrl=https://maxroll.gg/d3/guides/shadow-impale-demon-hunter-guide
+HeroClass=DemonHunter
+Icon=🏹
+IsEnabled=True
+IsImported=True
+Items=Aquila Cuirass|Avarice Band|Bane of the Powerful|Bane of the Stricken|Bane of the Trapped|Boon of the Hoarder|Convention of Elements|Dawn|Echoing Fury|Elusive Ring|Enforcer|Esoteric Alteration|Focus|Gloves of Worship|Gogok of Swiftness|Goldwrap|Holy Point Shot|Ice Climbers|In-geom|Karlei's Point|Mantle of Channeling|Mutilation Guard|Nemesis Bracers|Oculus Ring|Pain Enhancer|Pandemonium Loop|Restraint|Ring of Royal Grandeur|Stone Gauntlets|Stone of Jordan|Taeguk|The Compass Rose|The Flavor of Time|The Witching Hour|Unity|Warzechian Armguards|Wraps of Clarity
+
+[Profile:2b4ef906]
+Name=Demon Hunter Hungering Arrow
+Description=DemonHunter build with 21 items
+SourceUrl=https://www.icy-veins.com/d3/demon-hunter-hungering-arrow-build-with-god
+HeroClass=DemonHunter
+Icon=🏹
+IsEnabled=True
+IsImported=True
+Items=Antique Vintage Boots|Bane of the Stricken|Cold Cathode Trousers|Convention of Elements|Dawn|Depth Diggers|Dystopian Goggles|Focus|Galvanized Vest|Gas Powered Automail Forearm|Gears of Dreadlands|Hunter's Wrath|Mechanical Pauldrons|Restraint|Simplicity's Strength|Squirt's Necklace|Taeguk|The Ninth Cirri Satchel|Uliana's Stratagem|Valla's Bequest|Wraps of Clarity
+
+[Profile:2182355a]
+Name=Diablo 3 Season 37 LoD Death Nova Necromancer
+Description=Necromancer build with 35 items
+SourceUrl=https://maxroll.gg/d3/guides/lod-death-nova-necromancer-guide
+HeroClass=Necromancer
+Icon=💀
+IsEnabled=True
+IsImported=True
+Items=Ancient Parthan Defenders|Aquila Cuirass|Avarice Band|Bane of the Powerful|Bane of the Stricken|Bane of the Trapped|Bloodtide Blade|Boon of the Hoarder|Convention of Elements|Echoing Fury|Enforcer|Esoteric Alteration|Focus|Frostburn|Funerary Pick|Gloves of Worship|Haunted Visions|Ice Climbers|Illusory Boots|In-geom|Iron Rose|Legacy of Dreams|Mantle of Channeling|Mutilation Guard|Nemesis Bracers|Oculus Ring|Ring of Royal Grandeur|Scythe of the Cycle|Stone Gauntlets|Stone of Jordan|Strongarm Bracers|The Flavor of Time|The Witching Hour|Unity|Warzechian Armguards
+
 [BuiltInStates]
 Universal=True
-NecroLoD=True
+NecroLoD=False
 DHGoD=True
-WDMundu=True
+WDMundu=False
 BarbWW=False
 CrusAkkhan=False
 MonkInna=False

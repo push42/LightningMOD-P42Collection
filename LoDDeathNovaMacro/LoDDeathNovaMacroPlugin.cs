@@ -1,13 +1,21 @@
 ﻿namespace Turbo.Plugins.Custom.LoDDeathNovaMacro
 {
     using System;
+    using System.Collections.Generic;
+    using System.Drawing;
     using System.Linq;
     using System.Windows.Forms;
     using SharpDX.DirectInput;
+    using Turbo.Plugins.Custom.Core;
     using Turbo.Plugins.Default;
 
     /// <summary>
-    /// LoD Death Nova Necromancer Macro - Optimized Version
+    /// LoD Death Nova Necromancer Macro - Core Integrated v2.0
+    /// 
+    /// Now integrates with the Core Plugin Framework for:
+    /// - Centralized enable/disable via F8 hub
+    /// - Settings panel integration
+    /// - Shared UI components
     /// 
     /// Build: https://maxroll.gg/d3/guides/lod-death-nova-necromancer-guide
     /// 
@@ -24,23 +32,50 @@
     /// - Nayr's Black Death with Blight rune (Poison) stacks damage
     /// - Use PUSH mode for this variant
     /// 
-    /// Skills Setup:
-    /// - Left Click: Siphon Blood (Power Shift)
-    /// - Right Click: Death Nova (Blood Nova or Blight for Nayr's)
-    /// - 1: Bone Armor (Dislocation) - Stun for Krysbin's + DR
-    /// - 2: Simulacrum OR Poison Skill for Nayr's stacks
-    /// - 3: Frailty (Aura of Frailty) - Dayntee's DR
-    /// - 4: Blood Rush (Potency) - Mobility
-    /// 
-    /// F1 = Toggle macro ON/OFF
-    /// F2 = Switch between SPEED mode and PUSH mode
-    /// F3 = Force Nuke (manual Death Nova spam)
-    /// 
-    /// SPEED MODE: Auto-move + Continuous Siphon Blood (Iron Rose procs)
-    /// PUSH MODE: Auto-move + Manual Death Nova in packs + Siphon on boss
+    /// Hotkeys:
+    /// - F1 = Toggle macro ON/OFF
+    /// - F2 = Switch between SPEED mode and PUSH mode
+    /// - F3 = Force Nuke (manual Death Nova spam)
     /// </summary>
-    public class LoDDeathNovaMacroPlugin : BasePlugin, IInGameTopPainter, IKeyEventHandler, IAfterCollectHandler
+    public class LoDDeathNovaMacroPlugin : CustomPluginBase, IInGameTopPainter, IKeyEventHandler, IAfterCollectHandler
     {
+        #region Plugin Metadata (Required by Core)
+
+        public override string PluginId => "lod-death-nova-macro";
+        public override string PluginName => "LoD Death Nova";
+        public override string PluginDescription => "Automated rotation for LoD Blood Nova Necromancer";
+        public override string PluginVersion => "2.0.0";
+        public override string PluginCategory => "macro";
+        public override string PluginIcon => "💀";
+        public override bool HasSettings => true;
+
+        #endregion
+
+        #region Requirements (Necromancer Only)
+
+        public override HeroClass? RequiredHeroClass => HeroClass.Necromancer;
+        public override string RequiredBuild => "LoD Death Nova";
+        
+        public override bool RequirementsMet
+        {
+            get
+            {
+                if (!Hud.Game.IsInGame) return false;
+                if (Hud.Game.Me?.HeroClassDefinition?.HeroClass != HeroClass.Necromancer) return false;
+                // Could add additional checks here for specific skills/items
+                return true;
+            }
+        }
+
+        #endregion
+
+        #region Runtime State
+
+        public override bool IsActive => Running;
+        public override string StatusText => !Running ? "OFF" : (_isInCombat ? _phase.ToString() : "Ready");
+
+        #endregion
+
         #region Settings
 
         public IKeyEvent ToggleKeyEvent { get; set; }
@@ -175,7 +210,7 @@
         private int _bloodtideStacks = 0;
         private bool _hasSimulacrum = false;
 
-        // Fonts
+        // Legacy fonts (for standalone rendering)
         private IFont _titleFont;
         private IFont _runningFont;
         private IFont _modeFont;
@@ -183,8 +218,6 @@
         private IFont _tipFont;
         private IFont _movingFont;
         private IFont _phaseFont;
-        private IFont _coEFont;
-        private IFont _coEActiveFont;
         private IFont _stackFont;
         private IFont _bloodtideFont;
         private IFont _oculusFont;
@@ -197,6 +230,8 @@
         private IBrush _accentOffBrush;
 
         #endregion
+
+        #region Initialization
 
         public LoDDeathNovaMacroPlugin()
         {
@@ -224,9 +259,9 @@
             _coeSno = 430674;
             _oculusRingSno = 402461;
             _stoneGauntletsSno = 318820;
-            _nayrsSno = 476699; // Nayr's Black Death buff
+            _nayrsSno = 476699;
 
-            // Fonts
+            // Legacy fonts (used when Core not available)
             _titleFont = Hud.Render.CreateFont("tahoma", 8, 255, 150, 255, 150, true, false, 180, 0, 0, 0, true);
             _runningFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 0, 255, 0, true, false, 160, 0, 0, 0, true);
             _modeFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 255, 200, 0, true, false, 160, 0, 0, 0, true);
@@ -234,8 +269,6 @@
             _tipFont = Hud.Render.CreateFont("tahoma", 7, 200, 180, 180, 180, false, false, 140, 0, 0, 0, true);
             _movingFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 100, 180, 255, true, false, 160, 0, 0, 0, true);
             _phaseFont = Hud.Render.CreateFont("tahoma", 6.5f, 200, 150, 150, 150, false, false, 130, 0, 0, 0, true);
-            _coEFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 200, 150, 255, true, false, 160, 0, 0, 0, true);
-            _coEActiveFont = Hud.Render.CreateFont("tahoma", 7.5f, 255, 255, 50, 255, true, false, 160, 0, 0, 0, true);
             _stackFont = Hud.Render.CreateFont("tahoma", 7, 255, 255, 220, 100, false, false, 140, 0, 0, 0, true);
             _bloodtideFont = Hud.Render.CreateFont("tahoma", 7, 255, 255, 100, 100, false, false, 140, 0, 0, 0, true);
             _oculusFont = Hud.Render.CreateFont("tahoma", 7, 255, 255, 255, 100, true, false, 140, 0, 0, 0, true);
@@ -248,9 +281,158 @@
             _chatUI = Hud.Render.RegisterUiElement("Root.NormalLayer.chatentry_dialog_backgroundScreen.chatentry_content.chat_editline", null, null);
         }
 
+        #endregion
+
+        #region Settings Panel
+
+        public override void DrawSettings(IController hud, RectangleF rect, Dictionary<string, RectangleF> clickAreas, int scrollOffset)
+        {
+            float x = rect.X, y = rect.Y, w = rect.Width;
+
+            // Status indicator
+            string statusText = Running ? "● RUNNING" : "○ STOPPED";
+            var statusFont = Running ? (HasCore ? Core.FontSuccess : _runningFont) : (HasCore ? Core.FontError : _stoppedFont);
+            var statusLayout = statusFont.GetTextLayout(statusText);
+            statusFont.DrawText(statusLayout, x, y);
+            y += statusLayout.Metrics.Height + 10;
+
+            // Mode section
+            y += DrawSettingsHeader(x, y, "Mode Settings");
+            y += 8;
+
+            // Mode toggle
+            string modeText = IsPushMode ? "PUSH Mode" : "SPEED Mode";
+            y += DrawToggleSetting(x, y, w, modeText, IsPushMode, clickAreas, "toggle_mode");
+
+            // Oculus detection
+            y += DrawToggleSetting(x, y, w, "Oculus Detection", EnableOculusDetection, clickAreas, "toggle_oculus");
+
+            // Hide tip when off
+            y += DrawToggleSetting(x, y, w, "Hide When Stopped", IsHideTip, clickAreas, "toggle_hide");
+
+            y += 12;
+
+            // Combat section
+            y += DrawSettingsHeader(x, y, "Combat Settings");
+            y += 8;
+
+            // Enemy thresholds
+            y += DrawSelectorSetting(x, y, w, "Min Pack Size", MinEnemiesForNovaNuke.ToString(), clickAreas, "sel_packsize");
+            y += DrawSelectorSetting(x, y, w, "Nova Count", DeathNovaSpamCount.ToString(), clickAreas, "sel_novacount");
+            y += DrawSelectorSetting(x, y, w, "Detection Range", EnemyDetectionRange.ToString("F0"), clickAreas, "sel_range");
+
+            y += 12;
+
+            // Timing section
+            y += DrawSettingsHeader(x, y, "Timing (ms)");
+            y += 8;
+
+            y += DrawSelectorSetting(x, y, w, "Nova Delay", DeathNovaDelay.ToString(), clickAreas, "sel_novadelay");
+            y += DrawSelectorSetting(x, y, w, "Channel Time", SiphonChannelTime.ToString(), clickAreas, "sel_channel");
+
+            y += 16;
+
+            // Info
+            y += DrawSettingsHint(x, y, "[F1] Toggle • [F2] Mode • [F3] Force Nuke");
+        }
+
+        public override void HandleSettingsClick(string clickId)
+        {
+            switch (clickId)
+            {
+                case "toggle_mode":
+                    IsPushMode = !IsPushMode;
+                    ResetCombatCycle();
+                    break;
+                case "toggle_oculus":
+                    EnableOculusDetection = !EnableOculusDetection;
+                    break;
+                case "toggle_hide":
+                    IsHideTip = !IsHideTip;
+                    break;
+                case "sel_packsize_prev":
+                    MinEnemiesForNovaNuke = Math.Max(1, MinEnemiesForNovaNuke - 1);
+                    break;
+                case "sel_packsize_next":
+                    MinEnemiesForNovaNuke = Math.Min(15, MinEnemiesForNovaNuke + 1);
+                    break;
+                case "sel_novacount_prev":
+                    DeathNovaSpamCount = Math.Max(1, DeathNovaSpamCount - 1);
+                    break;
+                case "sel_novacount_next":
+                    DeathNovaSpamCount = Math.Min(20, DeathNovaSpamCount + 1);
+                    break;
+                case "sel_range_prev":
+                    EnemyDetectionRange = Math.Max(20, EnemyDetectionRange - 5);
+                    break;
+                case "sel_range_next":
+                    EnemyDetectionRange = Math.Min(100, EnemyDetectionRange + 5);
+                    break;
+                case "sel_novadelay_prev":
+                    DeathNovaDelay = Math.Max(50, DeathNovaDelay - 25);
+                    break;
+                case "sel_novadelay_next":
+                    DeathNovaDelay = Math.Min(500, DeathNovaDelay + 25);
+                    break;
+                case "sel_channel_prev":
+                    SiphonChannelTime = Math.Max(100, SiphonChannelTime - 50);
+                    break;
+                case "sel_channel_next":
+                    SiphonChannelTime = Math.Min(1000, SiphonChannelTime + 50);
+                    break;
+            }
+
+            SavePluginSettings();
+        }
+
+        // Settings persistence
+        protected override object GetSettingsObject() => new MacroSettings
+        {
+            IsPushMode = this.IsPushMode,
+            IsHideTip = this.IsHideTip,
+            EnableOculusDetection = this.EnableOculusDetection,
+            MinEnemiesForNovaNuke = this.MinEnemiesForNovaNuke,
+            DeathNovaSpamCount = this.DeathNovaSpamCount,
+            DeathNovaDelay = this.DeathNovaDelay,
+            SiphonChannelTime = this.SiphonChannelTime,
+            EnemyDetectionRange = this.EnemyDetectionRange
+        };
+
+        protected override void ApplySettingsObject(object settings)
+        {
+            if (settings is MacroSettings s)
+            {
+                IsPushMode = s.IsPushMode;
+                IsHideTip = s.IsHideTip;
+                EnableOculusDetection = s.EnableOculusDetection;
+                MinEnemiesForNovaNuke = s.MinEnemiesForNovaNuke;
+                DeathNovaSpamCount = s.DeathNovaSpamCount;
+                DeathNovaDelay = s.DeathNovaDelay;
+                SiphonChannelTime = s.SiphonChannelTime;
+                EnemyDetectionRange = s.EnemyDetectionRange;
+            }
+        }
+
+        private class MacroSettings : PluginSettingsBase
+        {
+            public bool IsPushMode { get; set; }
+            public bool IsHideTip { get; set; }
+            public bool EnableOculusDetection { get; set; }
+            public int MinEnemiesForNovaNuke { get; set; }
+            public int DeathNovaSpamCount { get; set; }
+            public int DeathNovaDelay { get; set; }
+            public int SiphonChannelTime { get; set; }
+            public float EnemyDetectionRange { get; set; }
+        }
+
+        #endregion
+
+        #region Key Handler
+
         public void OnKeyEvent(IKeyEvent keyEvent)
         {
             if (!Hud.Game.IsInGame) return;
+            if (!Enabled) return;  // Respect Core enable state
             if (!_isNecromancer) return;
             if (Hud.Inventory.InventoryMainUiElement.Visible) return;
 
@@ -272,9 +454,14 @@
             }
         }
 
+        #endregion
+
+        #region AfterCollect
+
         public void AfterCollect()
         {
             if (!Hud.Game.IsInGame) return;
+            if (!Enabled) return;  // Respect Core enable state
 
             _isNecromancer = Hud.Game.Me.HeroClassDefinition.HeroClass == HeroClass.Necromancer;
             if (!_isNecromancer)
@@ -303,6 +490,10 @@
             UpdateCombatState();
             ProcessMacro();
         }
+
+        #endregion
+
+        #region Combat State & Processing
 
         private void UpdateCombatState()
         {
@@ -403,13 +594,9 @@
             if (_isInCombat)
             {
                 if (IsPushMode)
-                {
                     ProcessPushMode();
-                }
                 else
-                {
                     ProcessSpeedMode();
-                }
             }
             else
             {
@@ -428,13 +615,8 @@
 
         private void ProcessSpeedMode()
         {
-            // SPEED MODE: Continuous channeling for Iron Rose procs
-            // Best for builds with Simulacrum (they proc Area Damage)
-            
-            // Maintain Bone Armor
             RefreshBoneArmor();
 
-            // Channel Siphon Blood - Iron Rose auto-casts Blood Nova
             if (_skillSiphonBlood != null)
             {
                 Hud.Interaction.DoAction(_skillSiphonBlood.Key);
@@ -443,14 +625,10 @@
 
         private void ProcessPushMode()
         {
-            // PUSH MODE: Manual Death Nova for Area Damage in packs
-            // Siphon Blood channeling for boss / Funerary stacks
-            
             bool hasLargePack = _closeEnemyCount >= MinEnemiesForNovaNuke;
             bool hasElite = Hud.Game.AliveMonsters.Any(m => m.IsElite && m.CentralXyDistanceToMe <= CloseRange);
             bool isBossFight = Hud.Game.AliveMonsters.Any(m => m.SnoMonster.Priority == MonsterPriority.boss && m.CentralXyDistanceToMe <= CloseRange);
 
-            // Force nuke request
             if (_forceNukeRequested)
             {
                 StartNukeSequence();
@@ -458,25 +636,20 @@
                 return;
             }
 
-            // Execute based on phase
             switch (_phase)
             {
                 case MacroPhase.Idle:
-                    // Decide what to do
                     if (isBossFight)
                     {
-                        // Boss: Channel Siphon Blood for Funerary stacks
                         _phase = MacroPhase.Channeling;
                         _phaseTimer.Restart();
                     }
                     else if (hasLargePack || hasElite)
                     {
-                        // Large pack: Start nuke sequence
                         StartNukeSequence();
                     }
                     else
                     {
-                        // Small pack: Just maintain buffs and light damage
                         RefreshBoneArmor();
                         if (_skillSiphonBlood != null)
                         {
@@ -508,13 +681,11 @@
 
         private void ProcessBoneArmorPhase()
         {
-            // Cast Bone Armor for Krysbin's STUN
             if (_skillBoneArmor != null && !_skillBoneArmor.IsOnCooldown)
             {
                 Hud.Interaction.DoAction(_skillBoneArmor.Key);
             }
 
-            // Wait for stun to apply
             if (_phaseTimer.ElapsedMilliseconds >= BoneArmorWaitTime)
             {
                 _phase = MacroPhase.Nuking;
@@ -525,7 +696,6 @@
 
         private void ProcessNukingPhase()
         {
-            // SPAM DEATH NOVA for Area Damage!
             if (_skillDeathNova == null)
             {
                 _phase = MacroPhase.Channeling;
@@ -533,7 +703,6 @@
                 return;
             }
 
-            // Cast Death Nova with delay
             if (_novaTimer.ElapsedMilliseconds >= DeathNovaDelay)
             {
                 Hud.Interaction.DoAction(_skillDeathNova.Key);
@@ -541,7 +710,6 @@
                 _novaTimer.Restart();
             }
 
-            // After enough novas, switch to channeling
             if (_novasPlaced >= DeathNovaSpamCount)
             {
                 _phase = MacroPhase.Channeling;
@@ -551,15 +719,11 @@
 
         private void ProcessChannelingPhase()
         {
-            // Channel Siphon Blood for:
-            // - Iron Rose procs (more Blood Novas)
-            // - Funerary Pick stacks
             if (_skillSiphonBlood != null)
             {
                 Hud.Interaction.DoAction(_skillSiphonBlood.Key);
             }
 
-            // After channeling, reset
             if (_phaseTimer.ElapsedMilliseconds >= SiphonChannelTime)
             {
                 _phase = MacroPhase.Idle;
@@ -618,6 +782,8 @@
             _forceNukeRequested = false;
             _movementTimer.Restart();
             _combatExitTimer.Restart();
+            
+            SetCoreStatus($"{PluginName} started", StatusType.Success);
         }
 
         private void StopMacro()
@@ -627,12 +793,22 @@
             _isInCombat = false;
             _forceNukeRequested = false;
             _movementTimer.Stop();
+            
+            SetCoreStatus($"{PluginName} stopped", StatusType.Warning);
         }
 
-        public void PaintTopInGame(ClipState clipState)
+        #endregion
+
+        #region Rendering
+
+        public override void PaintTopInGame(ClipState clipState)
         {
+            // IMPORTANT: Call base to ensure Core registration
+            base.PaintTopInGame(clipState);
+            
             if (clipState != ClipState.AfterClip) return;
             if (!Hud.Game.IsInGame) return;
+            if (!Enabled) return;  // Respect Core enable state
             if (!_isNecromancer) return;
 
             if (Hud.Inventory.InventoryMainUiElement.Visible && Running)
@@ -651,27 +827,32 @@
             float centerX = playerScreenPos.X;
             float baseY = playerScreenPos.Y + 10;
 
+            // Use Core fonts if available, fall back to legacy
+            var titleFont = HasCore ? Core.FontTitle : _titleFont;
+            var runningFontToUse = HasCore ? Core.FontSuccess : _runningFont;
+            var modeFontToUse = HasCore ? Core.FontWarning : _modeFont;
+            var stoppedFontToUse = HasCore ? Core.FontError : _stoppedFont;
+            var tipFontToUse = HasCore ? Core.FontMuted : _tipFont;
+            var movingFontToUse = HasCore ? Core.FontAccent : _movingFont;
+
             if (Running)
             {
                 // Title
-                var layout1 = _titleFont.GetTextLayout("LoD Blood Nova");
-                _titleFont.DrawText(layout1, centerX - layout1.Metrics.Width / 2, baseY);
+                var layout1 = titleFont.GetTextLayout("💀 LoD Blood Nova");
+                titleFont.DrawText(layout1, centerX - layout1.Metrics.Width / 2, baseY);
                 baseY += layout1.Metrics.Height + 2;
 
                 if (_isInCombat)
                 {
-                    // Combat status
-                    var layout2 = _runningFont.GetTextLayout($"● COMBAT ({_closeEnemyCount}/{_nearbyEnemyCount})");
-                    _runningFont.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
+                    var layout2 = runningFontToUse.GetTextLayout($"● COMBAT ({_closeEnemyCount}/{_nearbyEnemyCount})");
+                    runningFontToUse.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
                     baseY += layout2.Metrics.Height + 2;
 
-                    // Mode
                     string modeText = IsPushMode ? "PUSH (Manual Nova)" : "SPEED (Channel)";
-                    var modeLayout = _modeFont.GetTextLayout(modeText);
-                    _modeFont.DrawText(modeLayout, centerX - modeLayout.Metrics.Width / 2, baseY);
+                    var modeLayout = modeFontToUse.GetTextLayout(modeText);
+                    modeFontToUse.DrawText(modeLayout, centerX - modeLayout.Metrics.Width / 2, baseY);
                     baseY += modeLayout.Metrics.Height + 2;
 
-                    // Phase (Push mode)
                     if (IsPushMode)
                     {
                         string phaseText = GetPhaseText();
@@ -680,20 +861,17 @@
                         baseY += phaseLayout.Metrics.Height + 2;
                     }
 
-                    // Funerary stacks
                     int stacks = GetFuneraryPickStacks();
                     string stackText = $"Funerary: {stacks}/10";
                     var stackLayout = _stackFont.GetTextLayout(stackText);
                     _stackFont.DrawText(stackLayout, centerX - stackLayout.Metrics.Width / 2, baseY);
                     baseY += stackLayout.Metrics.Height + 2;
 
-                    // Bloodtide stacks
                     string bloodtideText = $"Bloodtide: {_bloodtideStacks}/10";
                     var bloodtideLayout = _bloodtideFont.GetTextLayout(bloodtideText);
                     _bloodtideFont.DrawText(bloodtideLayout, centerX - bloodtideLayout.Metrics.Width / 2, baseY);
                     baseY += bloodtideLayout.Metrics.Height + 2;
 
-                    // Oculus
                     if (EnableOculusDetection && _isInOculusCircle)
                     {
                         var oculusLayout = _oculusFont.GetTextLayout("★ OCULUS +85%");
@@ -702,25 +880,23 @@
                 }
                 else
                 {
-                    // Moving
-                    var layout2 = _movingFont.GetTextLayout("● MOVING");
-                    _movingFont.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
+                    var layout2 = movingFontToUse.GetTextLayout("● MOVING");
+                    movingFontToUse.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
                     baseY += layout2.Metrics.Height + 2;
 
                     string modeText = IsPushMode ? "[F2] PUSH" : "[F2] SPEED";
-                    var modeLayout = _tipFont.GetTextLayout(modeText);
-                    _tipFont.DrawText(modeLayout, centerX - modeLayout.Metrics.Width / 2, baseY);
+                    var modeLayout = tipFontToUse.GetTextLayout(modeText);
+                    tipFontToUse.DrawText(modeLayout, centerX - modeLayout.Metrics.Width / 2, baseY);
                 }
             }
             else
             {
-                // OFF state
-                var layout1 = _titleFont.GetTextLayout("LoD Blood Nova");
-                _titleFont.DrawText(layout1, centerX - layout1.Metrics.Width / 2, baseY);
+                var layout1 = titleFont.GetTextLayout("💀 LoD Blood Nova");
+                titleFont.DrawText(layout1, centerX - layout1.Metrics.Width / 2, baseY);
                 baseY += layout1.Metrics.Height + 2;
 
-                var layout2 = _stoppedFont.GetTextLayout("OFF [F1]");
-                _stoppedFont.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
+                var layout2 = stoppedFontToUse.GetTextLayout("OFF [F1]");
+                stoppedFontToUse.DrawText(layout2, centerX - layout2.Metrics.Width / 2, baseY);
             }
         }
 
@@ -734,6 +910,8 @@
                 default: return "";
             }
         }
+
+        #endregion
     }
 
     internal enum MacroPhase

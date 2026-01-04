@@ -1,0 +1,11 @@
+{
+  "IsEnabled": false,
+  "MinBloodShardsToStart": 100,
+  "StopAtBloodShards": 0,
+  "BuyIntervalMs": 50,
+  "SelectedItem": 14,
+  "TotalItemsBought": 0,
+  "ShowDebugOverlay": false,
+  "LastModified": "2026-01-04T08:42:50.8492275+01:00",
+  "Version": 1
+}

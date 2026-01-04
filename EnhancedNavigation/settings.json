@@ -1,0 +1,14 @@
+{
+  "IsActive": true,
+  "AutoNavigate": false,
+  "UseNavMesh": true,
+  "UseDynamicAvoidance": true,
+  "ShowWaypoints": true,
+  "ShowPath": true,
+  "ShowPanel": true,
+  "WaypointInterval": 2.10000277,
+  "WaypointDistanceThreshold": 2.0,
+  "WaypointSize": 3.5,
+  "LastModified": "2026-01-03T10:53:06.777344+01:00",
+  "Version": 1
+}

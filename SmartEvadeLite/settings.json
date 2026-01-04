@@ -1,0 +1,11 @@
+{
+  "IsActive": false,
+  "MinEvadeDelay": 1.25,
+  "MaxEvadeDelay": 2.0,
+  "EvadeCooldown": 3.0,
+  "EvadeDistance": 8.0,
+  "ShowDangerCircles": true,
+  "ShowPanel": false,
+  "LastModified": "2026-01-04T07:44:04.3174044+01:00",
+  "Version": 1
+}
