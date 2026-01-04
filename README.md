@@ -1,4 +1,4 @@
-﻿# LightningMOD-P42Collection
+# LightningMOD P42 Collection
 
 <div align="center">
 
@@ -14,19 +14,19 @@
 
 ---
 
-[Features](#-features) � [Installation](#-installation) � [Plugins](#-plugin-catalog) � [Hotkeys](#-hotkey-reference) � [FAQ](#-faq)
+[Features](#features) | [Installation](#installation) | [Plugins](#plugin-catalog) | [Hotkeys](#hotkey-reference) | [FAQ](#faq)
 
 </div>
 
 ---
 
-## ? Features
+## Features
 
 <table>
 <tr>
 <td width="50%">
 
-### ?? Smart Automation
+### Smart Automation
 - **Intelligent pickup** with customizable priorities
 - **Auto-salvage** with build protection
 - **Kadala gambling** automation
@@ -35,7 +35,7 @@
 </td>
 <td width="50%">
 
-### ??? Combat Assistance
+### Combat Assistance
 - **Smart Evade** - Human-like danger avoidance
 - **Class macros** - Optimized skill rotations
 - **Pylon alerts** - Never miss a shrine
@@ -46,7 +46,7 @@
 <tr>
 <td width="50%">
 
-### ??? Enhanced Visuals
+### Enhanced Visuals
 - **Item Reveal** - See Ancient/Primal before ID
 - **Stat ranges** - Know what can roll
 - **Ground highlights** - Important loot visibility
@@ -55,7 +55,7 @@
 </td>
 <td width="50%">
 
-### ?? Developer Tools
+### Developer Tools
 - **Core Framework** - Unified plugin system
 - **Settings persistence** - Auto-save configurations
 - **UI Components** - Reusable design library
@@ -67,7 +67,7 @@
 
 ---
 
-## ?? Screenshots
+## Screenshots
 
 <div align="center">
 
@@ -83,20 +83,20 @@
 
 ---
 
-## ?? Installation
+## Installation
 
 ### Quick Install
 
-1. **Download** this repository (Code ? Download ZIP)
+1. **Download** this repository (Code > Download ZIP)
 2. **Extract** to your TurboHUD folder:
    ```
    TurboHUD/
-   ??? plugins/
-       ??? Custom/        ? Extract here
-           ??? Core/
-           ??? AutoPickupSilent/
-           ??? SmartEvade/
-           ??? ...
+   +-- plugins/
+       +-- Custom/        <-- Extract here
+           +-- Core/
+           +-- AutoPickupSilent/
+           +-- SmartEvade/
+           +-- ...
    ```
 3. **Restart** TurboHUD
 4. **Done!** Plugins auto-load and appear in-game
@@ -105,26 +105,26 @@
 
 Copy individual plugin folders to `TurboHUD/plugins/Custom/`
 
-> ?? **Requirement**: The `Core` plugin is recommended for unified settings management
+> **Note**: The `Core` plugin is recommended for unified settings management
 
 ---
 
-## ?? Plugin Catalog
+## Plugin Catalog
 
-### ?? Tier 1: Essential Plugins
+### Tier 1: Essential Plugins
 
 <details>
-<summary><b>?? Core Framework</b> � The foundation for all plugins</summary>
+<summary><b>Core Framework</b> - The foundation for all plugins</summary>
 
 #### Overview
 The Core plugin provides a unified framework for all custom plugins with shared UI components, settings persistence, and a modern design system.
 
 #### Features
-- ?? Central plugin registry with enable/disable
-- ?? Automatic settings persistence (JSON)
-- ?? Shared UI component library
-- ??? Plugin categorization system
-- ?? F8 toggle for settings panel
+- Central plugin registry with enable/disable
+- Automatic settings persistence (JSON)
+- Shared UI component library
+- Plugin categorization system
+- F8 toggle for settings panel
 
 #### Key Benefits
 | Feature | Description |
@@ -139,22 +139,22 @@ The Core plugin provides a unified framework for all custom plugins with shared 
 </details>
 
 <details>
-<summary><b>?? Auto Pickup Silent</b> � Intelligent item collection</summary>
+<summary><b>Auto Pickup Silent</b> - Intelligent item collection</summary>
 
 #### Overview
 Aggressive auto-pickup that grabs items efficiently without spamming the pickup action.
 
 #### Features
-- ? 5 items per frame processing
-- ?? 18-yard pickup range
-- ?? Priority-based collection
-- ?? Silent operation (no spam)
+- 5 items per frame processing
+- 18-yard pickup range
+- Priority-based collection
+- Silent operation (no spam)
 
 #### Pickup Priority
-1. ?? Death's Breath & Crafting Materials
-2. ? Legendary Items
-3. ?? Gold (optional)
-4. ?? Gems (optional)
+1. Death's Breath & Crafting Materials
+2. Legendary Items
+3. Gold (optional)
+4. Gems (optional)
 
 #### Hotkey
 | Key | Action |
@@ -166,7 +166,7 @@ Aggressive auto-pickup that grabs items efficiently without spamming the pickup 
 </details>
 
 <details>
-<summary><b>?? Item Reveal</b> � See item quality before identifying</summary>
+<summary><b>Item Reveal</b> - See item quality before identifying</summary>
 
 #### Overview
 Reveals Ancient/Primal status and possible stat ranges on unidentified items!
@@ -174,21 +174,21 @@ Reveals Ancient/Primal status and possible stat ranges on unidentified items!
 #### What You Can See
 | Data | Visibility | Notes |
 |------|:----------:|-------|
-| Ancient/Primal | ? | Always visible |
-| Set Item | ? | Detected |
-| Item Type | ? | Full info |
-| Stat Ranges | ? | Min-Max values |
-| Actual Stats | ? | Server-side |
+| Ancient/Primal | YES | Always visible |
+| Set Item | YES | Detected |
+| Item Type | YES | Full info |
+| Stat Ranges | YES | Min-Max values |
+| Actual Stats | NO | Server-side |
 
 #### Display Example
 ```
 Dead Man's Legacy
-? ANCIENT ?
+* ANCIENT *
 [Set Item]
-????????????????
-?? UNIDENTIFIED
-????????????????
-?? Possible Stats:
+----------------
+UNIDENTIFIED
+----------------
+Possible Stats:
   IAS%: 15.0% - 20.0%
   LegPower: 150% - 200%
 ```
@@ -205,32 +205,32 @@ Dead Man's Legacy
 
 ---
 
-### ??? Tier 2: Combat & Safety
+### Tier 2: Combat & Safety
 
 <details>
-<summary><b>?? Smart Evade Lite</b> � Human-like danger avoidance (Recommended)</summary>
+<summary><b>Smart Evade Lite</b> - Human-like danger avoidance (Recommended)</summary>
 
 #### Overview
 A lightweight auto-dodge that helps avoid ground effects with natural, human-like reactions.
 
 #### How It Works
 ```
-1. Detection ? Only triggers when INSIDE danger
-2. Delay    ? Random 1.25-2 second reaction time
-3. Action   ? Single escape movement
-4. Cooldown ? 3 second wait before next evade
+1. Detection -> Only triggers when INSIDE danger
+2. Delay    -> Random 1.25-2 second reaction time
+3. Action   -> Single escape movement
+4. Cooldown -> 3 second wait before next evade
 ```
 
 #### Danger Types Detected
-| Affix | Priority | Icon |
-|-------|:--------:|:----:|
-| Frozen | ?? High | ?? |
-| Molten Explosion | ?? High | ?? |
-| Arcane | ?? High | ?? |
-| Thunderstorm | ?? High | ? |
-| Desecrator | ?? Normal | ?? |
-| Plagued | ?? Normal | ?? |
-| Frozen Pulse | ?? Normal | ?? |
+| Affix | Priority |
+|-------|:--------:|
+| Frozen | High |
+| Molten Explosion | High |
+| Arcane | High |
+| Thunderstorm | High |
+| Desecrator | Normal |
+| Plagued | Normal |
+| Frozen Pulse | Normal |
 
 #### Hotkey
 | Key | Action |
@@ -242,30 +242,30 @@ A lightweight auto-dodge that helps avoid ground effects with natural, human-lik
 </details>
 
 <details>
-<summary><b>? Smart Evade (Full)</b> � Advanced protection system</summary>
+<summary><b>Smart Evade (Full)</b> - Advanced protection system</summary>
 
 #### Overview
 Full-featured auto-evade with wall awareness, preemptive dodging, and intelligent pathing.
 
 #### Features
-- ?? Wall collision detection
-- ?? Predictive danger avoidance
-- ??? Smart path finding
-- ?? Highly configurable
+- Wall collision detection
+- Predictive danger avoidance
+- Smart path finding
+- Highly configurable
 
 #### Hotkey
 | Key | Action |
 |-----|--------|
 | `Shift+J` | Toggle On/Off |
 
-> ?? **Note**: More aggressive than Lite version
+> **Note**: More aggressive than Lite version
 
 **Location:** `SmartEvade/`
 
 </details>
 
 <details>
-<summary><b>? Pylon Alert</b> � Never miss a pylon again</summary>
+<summary><b>Pylon Alert</b> - Never miss a pylon again</summary>
 
 #### Overview
 Visual and audio alerts when pylons appear in Greater Rifts.
@@ -273,11 +273,11 @@ Visual and audio alerts when pylons appear in Greater Rifts.
 #### Pylon Types
 | Pylon | Alert Color | Priority |
 |-------|:-----------:|:--------:|
-| Power | ?? Red | High |
-| Conduit | ?? Blue | High |
-| Channeling | ?? Purple | Medium |
-| Shield | ?? Yellow | Medium |
-| Speed | ?? Green | Medium |
+| Power | Red | High |
+| Conduit | Blue | High |
+| Channeling | Purple | Medium |
+| Shield | Yellow | Medium |
+| Speed | Green | Medium |
 
 **Location:** `PylonAlert/`
 
@@ -285,10 +285,10 @@ Visual and audio alerts when pylons appear in Greater Rifts.
 
 ---
 
-### ?? Tier 3: Class Macros
+### Tier 3: Class Macros
 
 <details>
-<summary><b>?? Wizard Star Pact Macro</b> � Meteor Shower automation</summary>
+<summary><b>Wizard Star Pact Macro</b> - Meteor Shower automation</summary>
 
 #### Overview
 Automates the complex Star Pact Wizard rotation for Challenge Rifts.
@@ -311,7 +311,7 @@ Automates the complex Star Pact Wizard rotation for Challenge Rifts.
 </details>
 
 <details>
-<summary><b>?? LoD Death Nova Macro</b> � Necromancer automation</summary>
+<summary><b>LoD Death Nova Macro</b> - Necromancer automation</summary>
 
 #### Overview
 Handles the Death Nova Necromancer rotation efficiently.
@@ -321,7 +321,7 @@ Handles the Death Nova Necromancer rotation efficiently.
 </details>
 
 <details>
-<summary><b>?? Natalya Spike Trap Macro</b> � Demon Hunter automation</summary>
+<summary><b>Natalya Spike Trap Macro</b> - Demon Hunter automation</summary>
 
 #### Overview
 Automates Natalya's set Spike Trap placement and detonation.
@@ -332,10 +332,10 @@ Automates Natalya's set Spike Trap placement and detonation.
 
 ---
 
-### ?? Tier 4: Inventory Management
+### Tier 4: Inventory Management
 
 <details>
-<summary><b>?? Inventory Sorter</b> � Organize your bags instantly</summary>
+<summary><b>Inventory Sorter</b> - Organize your bags instantly</summary>
 
 #### Overview
 Multiple sorting algorithms to keep your inventory organized.
@@ -344,7 +344,7 @@ Multiple sorting algorithms to keep your inventory organized.
 | Mode | Description |
 |------|-------------|
 | **Type** | Group by item type |
-| **Quality** | Primals ? Ancients ? Normal |
+| **Quality** | Primals > Ancients > Normal |
 | **Slot** | By equipment slot |
 | **Smart** | Combination of all |
 
@@ -359,24 +359,24 @@ Multiple sorting algorithms to keep your inventory organized.
 </details>
 
 <details>
-<summary><b>?? Smart Salvage</b> � Intelligent item recycling</summary>
+<summary><b>Smart Salvage</b> - Intelligent item recycling</summary>
 
 #### Overview
 Auto-salvage with build protection - never accidentally destroy your needed items!
 
 #### Features
-- ?? Pre-configured build blacklists
-- ?? Import from Maxroll.gg URLs
-- ??? Protects Ancients & Primals
-- ?? Socket protection
+- Pre-configured build blacklists
+- Import from Maxroll.gg URLs
+- Protects Ancients & Primals
+- Socket protection
 
 #### Protection Levels
 | Protection | Saved |
 |------------|:-----:|
-| Primal Items | ? |
-| Ancient Items | ? (configurable) |
-| Socketed Items | ? |
-| Blacklisted Items | ? |
+| Primal Items | Yes |
+| Ancient Items | Yes (configurable) |
+| Socketed Items | Yes |
+| Blacklisted Items | Yes |
 
 #### Hotkey
 | Key | Action |
@@ -388,15 +388,15 @@ Auto-salvage with build protection - never accidentally destroy your needed item
 </details>
 
 <details>
-<summary><b>?? Kadala Auto Buy</b> � Automated gambling</summary>
+<summary><b>Kadala Auto Buy</b> - Automated gambling</summary>
 
 #### Overview
 Automates Blood Shard spending at Kadala with smart item selection.
 
 #### Features
-- ?? Target specific item slots
-- ?? Track gambling statistics
-- ?? Auto-stop conditions
+- Target specific item slots
+- Track gambling statistics
+- Auto-stop conditions
 
 **Location:** `KadalaAutoBuy/`
 
@@ -404,31 +404,31 @@ Automates Blood Shard spending at Kadala with smart item selection.
 
 ---
 
-### ?? Tier 5: Advanced Automation
+### Tier 5: Advanced Automation
 
 <details>
-<summary><b>?? Auto Farm (GR)</b> � Greater Rift automation</summary>
+<summary><b>Auto Farm (GR)</b> - Greater Rift automation</summary>
 
 #### Overview
 Automated Greater Rift farming with intelligent decision making.
 
 #### States
 ```
-IDLE ? ENTER_GR ? CLEAR_RIFT ? KILL_RG ? UPGRADE_GEM ? CLOSE_RIFT
+IDLE -> ENTER_GR -> CLEAR_RIFT -> KILL_RG -> UPGRADE_GEM -> CLOSE_RIFT
 ```
 
 #### Features
-- ?? Smart mob targeting
-- ?? Auto gem upgrading
-- ?? Continuous rift loops
-- ?? Configurable GR levels
+- Smart mob targeting
+- Auto gem upgrading
+- Continuous rift loops
+- Configurable GR levels
 
 **Location:** `AutoFarm/`
 
 </details>
 
 <details>
-<summary><b>??? Navigation Engine</b> � Advanced pathfinding</summary>
+<summary><b>Navigation Engine</b> - Advanced pathfinding</summary>
 
 #### Overview
 Sophisticated navigation system with A* pathfinding and spatial awareness.
@@ -446,7 +446,7 @@ Sophisticated navigation system with A* pathfinding and spatial awareness.
 </details>
 
 <details>
-<summary><b>?? Enhanced Navigation</b> � Waypoint system</summary>
+<summary><b>Enhanced Navigation</b> - Waypoint system</summary>
 
 #### Overview
 Waypoint-based navigation with preset routes.
@@ -457,10 +457,10 @@ Waypoint-based navigation with preset routes.
 
 ---
 
-### ?? Tier 6: Utilities
+### Tier 6: Utilities
 
 <details>
-<summary><b>?? Custom Plugin Config Panel</b> � Settings UI</summary>
+<summary><b>Custom Plugin Config Panel</b> - Settings UI</summary>
 
 #### Overview
 In-game configuration panel for all custom plugins.
@@ -470,12 +470,12 @@ In-game configuration panel for all custom plugins.
 </details>
 
 <details>
-<summary><b>?? Auto Master</b> � Legacy automation (Deprecated)</summary>
+<summary><b>Auto Master</b> - Legacy automation (Deprecated)</summary>
 
 #### Overview
 Legacy auto-pickup system. Replaced by **Auto Pickup Silent**.
 
-> ?? **Status**: DEPRECATED - Use AutoPickupSilent instead
+> **Status**: DEPRECATED - Use AutoPickupSilent instead
 
 **Location:** `AutoMaster/`
 
@@ -483,7 +483,7 @@ Legacy auto-pickup system. Replaced by **Auto Pickup Silent**.
 
 ---
 
-## ?? Hotkey Reference
+## Hotkey Reference
 
 ### Quick Reference Card
 
@@ -502,100 +502,100 @@ Legacy auto-pickup system. Replaced by **Auto Pickup Silent**.
 
 ---
 
-## ?? UI Layout Reference
+## UI Layout Reference
 
 ### Left Side Panel Positions
 
 ```
-???????????????????????
-?    Y = 0.28         ? ? Smart Evade
-?    Y = 0.35         ? ? (reserved)
-?    Y = 0.42         ? ? Auto Master
-?    Y = 0.49         ? ? Evade Lite
-?    Y = 0.56         ? ? Inventory Sort
-?    Y = 0.63         ? ? Auto Pickup
-???????????????????????
++---------------------+
+|    Y = 0.28         | <- Smart Evade
+|    Y = 0.35         | <- (reserved)
+|    Y = 0.42         | <- Auto Master
+|    Y = 0.49         | <- Evade Lite
+|    Y = 0.56         | <- Inventory Sort
+|    Y = 0.63         | <- Auto Pickup
++---------------------+
 ```
 
 ---
 
-## ?? Recommended Setups
+## Recommended Setups
 
-### ? Speed Farming Build
+### Speed Farming Build
 *For T16, Bounties, Normal Rifts*
 
 | Plugin | Purpose |
 |--------|---------|
-| ? Auto Pickup Silent | Fast looting |
-| ? Smart Evade Lite | Basic safety |
-| ? Inventory Sorter | Quick organization |
+| Auto Pickup Silent | Fast looting |
+| Smart Evade Lite | Basic safety |
+| Inventory Sorter | Quick organization |
 
-### ?? Greater Rift Push
+### Greater Rift Push
 *For high GR progression*
 
 | Plugin | Purpose |
 |--------|---------|
-| ? Smart Evade (Full) | Maximum safety |
-| ? Pylon Alert | Shrine timing |
-| ? Item Reveal | Quick ID priority |
+| Smart Evade (Full) | Maximum safety |
+| Pylon Alert | Shrine timing |
+| Item Reveal | Quick ID priority |
 
-### ?? AFK Farming
+### AFK Farming
 *For hands-free grinding*
 
 | Plugin | Purpose |
 |--------|---------|
-| ? Auto Farm | GR automation |
-| ? Auto Pickup Silent | Collect everything |
-| ? Smart Salvage | Clean inventory |
-| ? Smart Evade (Full) | Stay alive |
+| Auto Farm | GR automation |
+| Auto Pickup Silent | Collect everything |
+| Smart Salvage | Clean inventory |
+| Smart Evade (Full) | Stay alive |
 
-### ?? Challenge Rift (Wizard)
+### Challenge Rift (Wizard)
 *For weekly chest*
 
 | Plugin | Purpose |
 |--------|---------|
-| ? Wizard Star Pact Macro | Optimal rotation |
+| Wizard Star Pact Macro | Optimal rotation |
 
 ---
 
-## ?? File Structure
+## File Structure
 
 ```
 TurboHUD/
-??? plugins/
-    ??? Custom/
-        ??? ?? Core/                    # Framework
-        ?   ??? CorePlugin.cs
-        ?   ??? UIComponents.cs
-        ?   ??? CustomPluginBase.cs
-        ?
-        ??? ?? AutoPickupSilent/        # Item collection
-        ??? ?? ItemReveal/              # Item analysis
-        ??? ?? SmartEvade/              # Full evade
-        ??? ?? SmartEvadeLite/          # Lite evade
-        ??? ?? InventorySorter/         # Bag sorting
-        ??? ?? SmartSalvage/            # Auto salvage
-        ??? ?? KadalaAutoBuy/           # Gambling
-        ??? ?? PylonAlert/              # Shrine alerts
-        ?
-        ??? ?? WizardStarPactMacro/     # Wizard macro
-        ??? ?? LoDDeathNovaMacro/       # Necro macro
-        ??? ?? NatalyaSpikeTrapMacro/   # DH macro
-        ?
-        ??? ?? AutoFarm/                # GR automation
-        ??? ?? Navigation/              # Pathfinding
-        ??? ?? EnhancedNavigation/      # Waypoints
-        ?
-        ??? ?? .assets/                 # Images
-            ??? main_image.png
-            ??? settings_gui.png
-            ??? sidepanel_ui.png
-            ??? iteminfo_window.png
++-- plugins/
+    +-- Custom/
+        +-- Core/                    # Framework
+        |   +-- CorePlugin.cs
+        |   +-- UIComponents.cs
+        |   +-- CustomPluginBase.cs
+        |
+        +-- AutoPickupSilent/        # Item collection
+        +-- ItemReveal/              # Item analysis
+        +-- SmartEvade/              # Full evade
+        +-- SmartEvadeLite/          # Lite evade
+        +-- InventorySorter/         # Bag sorting
+        +-- SmartSalvage/            # Auto salvage
+        +-- KadalaAutoBuy/           # Gambling
+        +-- PylonAlert/              # Shrine alerts
+        |
+        +-- WizardStarPactMacro/     # Wizard macro
+        +-- LoDDeathNovaMacro/       # Necro macro
+        +-- NatalyaSpikeTrapMacro/   # DH macro
+        |
+        +-- AutoFarm/                # GR automation
+        +-- Navigation/              # Pathfinding
+        +-- EnhancedNavigation/      # Waypoints
+        |
+        +-- .assets/                 # Images
+            +-- main_image.png
+            +-- settings_gui.png
+            +-- sidepanel_ui.png
+            +-- iteminfo_window.png
 ```
 
 ---
 
-## ? FAQ
+## FAQ
 
 <details>
 <summary><b>How do I disable a plugin?</b></summary>
@@ -634,24 +634,24 @@ Copy the Maxroll.gg build URL, open Smart Salvage settings, and paste it in the 
 
 ---
 
-## ?? Changelog
+## Changelog
 
 ### 2026-01-04
-- ?? Added all custom plugins to community repository
-- ?? Created comprehensive documentation
-- ??? Added screenshots and visual guides
-- ?? Updated Smart Evade with wall awareness
+- Added all custom plugins to community repository
+- Created comprehensive documentation
+- Added screenshots and visual guides
+- Updated Smart Evade with wall awareness
 
 ### 2025-12-31
-- ? AutoPickupSilent: Made aggressive (5 items/frame)
-- ?? WizardStarPactMacro: Created for Challenge Rift
+- AutoPickupSilent: Made aggressive (5 items/frame)
+- WizardStarPactMacro: Created for Challenge Rift
 
 ### 2025-12-30
-- ?? Initial release of plugin collection
+- Initial release of plugin collection
 
 ---
 
-## ?? Contributing
+## Contributing
 
 Found a bug? Have a suggestion? 
 
@@ -662,7 +662,7 @@ Found a bug? Have a suggestion?
 
 ---
 
-## ?? License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -670,12 +670,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Made with ?? for the Diablo 3 community**
+**Made with love for the Diablo 3 community**
 
-*Happy farming, Nephalem!* ??
+*Happy farming, Nephalem!*
 
 ---
-
-[![GitHub](https://img.shields.io/badge/GitHub-push42-181717?logo=github)](https://github.com/push42)
-
-</div>
